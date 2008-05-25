@@ -1,0 +1,12 @@
+use inc::Module::Install;
+name 'POE-Component-Pluggable';
+author 'Chris Williams <chris@bingosnet.co.uk>';
+license 'perl';
+version_from 'lib/POE/Component/Pluggable.pm';
+abstract_from 'lib/POE/Component/Pluggable.pm';
+build_requires 'Test::More' => 0.47;
+perl_version '5.000';
+requires 'warnings::compat' => 0 if $] < 5.006;
+requires 'Carp' => 0;
+requires 'POE' => 0.38;
+WriteAll();
