@@ -4,6 +4,7 @@ POE::Component::Pluggable
 1.06
 	- Allow changing the _register()/_unregister() prefix (Hinrik)
 	- Allow abbreviating event prefixes in method names (Hinrik)
+	- Some improvements in documentation (Hinrik)
 
 1.04	Tue May  6 11:55:54 BST 2008
 	- Removed kwalitee test and added license information
