@@ -6,14 +6,20 @@ use POE::Component::Pluggable::Pipeline;
 use POE::Component::Pluggable::Constants qw(:ALL);
 use vars qw($VERSION);
 
-$VERSION='1.04';
+$VERSION='1.06';
 
 sub _pluggable_init {
   my $self = shift;
   my %opts = @_;
   $self->{'_pluggable_' . lc $_} = delete $opts{$_} for keys %opts;
+  $self->{_pluggable_reg_prefix} = 'plugin_' unless $self->{_pluggable_reg_prefix};
   $self->{_pluggable_prefix} = 'pluggable_' unless $self->{_pluggable_prefix};
-  $self->{_pluggable_types} = [] unless $self->{_pluggable_types} and ref $self->{_pluggable_types} eq 'ARRAY';
+  if (ref $self->{_pluggable_types} eq 'ARRAY') {
+    $self->{_pluggable_types} = { map { ($_ => $_)  } $self->{_pluggable_types} };
+  }
+  elsif (ref $self->{_pluggable_types} ne 'HASH') {
+    $self->{_pluggable_types} = {};
+  }
   return 1;
 }
 
@@ -31,7 +37,7 @@ sub _pluggable_process {
   my $pipeline = $self->pipeline;
   my $prefix = $self->{_pluggable_prefix};
   $event =~ s/^\Q$prefix\E//;
-  my $sub = join '_', $type, $event;
+  my $sub = join '_', $self->{_pluggable_types}->{$type}, $event;
   my $return = PLUGIN_EAT_NONE;
   my $self_ret = $return;
 
@@ -138,7 +144,7 @@ sub plugin_register {
   my ($self, $plugin, $type, @events) = @_;
   my $pipeline = $self->pipeline;
 
-  unless ( grep { $_ eq $type } @{ $self->{_pluggable_types} } ) {
+  unless ( grep { $_ eq $type } keys %{ $self->{_pluggable_types} } ) {
     warn "That type: '$type', is not supported!";
     return;
   }
@@ -169,7 +175,7 @@ sub plugin_unregister {
   my ($self, $plugin, $type, @events) = @_;
   my $pipeline = $self->pipeline;
 
-  unless ( grep { $_ eq $type } @{ $self->{_pluggable_types} } ) {
+  unless ( grep { $_ eq $type } keys %{ $self->{_pluggable_types} } ) {
     warn "That type: '$type', is not supported!";
     return;
   }
@@ -373,8 +379,11 @@ Subclassing POE::Component::Pluggable gives your object the following 'private' 
 This should be called on your object after initialisation, but before you want to start processing plugins.
 It accepts a number of argument/value pairs:
 
-  'prefix', the prefix for your events;
-  'types', an arrayref of the types of event that your poco will support;
+  'prefix', the prefix for your events (default: 'pluggable_');
+  'reg_prefix', the prefix for the register()/unregister() plugin methods (default: 'plugin_');
+  'types', an arrayref of the types of events that your poco will support, OR a hashref with
+           the event types as keys and their abbrevations (used as plugin event method prefixes)
+           as values;
 
 Notes: 'prefix' should probably end with a '_'. The types specify the prefixes for plugin handlers. You can specify as many different types as you require. 
 

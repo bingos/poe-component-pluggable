@@ -4,10 +4,10 @@ use strict;
 use warnings;
 use vars qw($VERSION);
 
-$VERSION = '1.02';
+$VERSION = '1.06';
 
 sub new {
-  my ($class, $irc) = @_;
+  my ($class, $irc, $prefix) = @_;
 
   return bless {
     PLUGS => {},
@@ -24,8 +24,8 @@ sub push {
     if $self->{PLUGS}{$alias};
 
   my $return;
-
-  eval { $return = $plug->plugin_register($self->{IRC}) };
+  my $register = "$self->{IRC}->{_pluggable_reg_prefix}register";
+  eval { $return = $plug->$register($self->{IRC}) };
 
   if ($return) {
     push @{ $self->{PIPELINE} }, $plug;
@@ -47,8 +47,9 @@ sub pop {
   my $alias = delete $self->{PLUGS}{$plug};
   delete $self->{PLUGS}{$alias};
   delete $self->{HANDLES}{$plug};
+  my $unregister = "$self->{IRC}->{_pluggable_reg_prefix}unregister";
 
-  eval { $plug->plugin_unregister($self->{IRC}) };
+  eval { $plug->$unregister($self->{IRC}) };
   $self->{IRC}->_pluggable_event($self->{IRC}->{_pluggable_prefix} . "plugin_del" => $alias => $plug);
 
   return wantarray() ? ($plug, $alias) : $plug;
@@ -61,8 +62,9 @@ sub unshift {
     if $self->{PLUGS}{$alias};
 
   my $return;
+  my $register = "$self->{IRC}->{_pluggable_reg_prefix}register";
 
-  eval { $return = $plug->plugin_register($self->{IRC}) };
+  eval { $return = $plug->$register($self->{IRC}) };
 
   if ($return) {
     unshift @{ $self->{PIPELINE} }, $plug;
@@ -87,7 +89,8 @@ sub shift {
   delete $self->{PLUGS}{$alias};
   delete $self->{HANDLES}{$plug};
 
-  eval { $plug->plugin_unregister($self->{IRC}) };
+  my $unregister = "$self->{IRC}->{_pluggable_reg_prefix}unregister";
+  eval { $plug->$unregister($self->{IRC}) };
   $self->{IRC}->_pluggable_event($self->{IRC}->{_pluggable_prefix} . "plugin_del" => $alias => $plug);
 
   return wantarray() ? ($plug, $alias) : $plug;
@@ -106,7 +109,9 @@ sub replace {
   delete $self->{PLUGS}{$old_p};
   delete $self->{PLUGS}{$old_a};
   delete $self->{HANDLES}{$old_p};
-  eval { $old_p->plugin_unregister($self->{IRC}) };
+  
+  my $unregister = "$self->{IRC}->{_pluggable_reg_prefix}unregister";
+  eval { $old_p->$unregister($self->{IRC}) };
   $self->{IRC}->_pluggable_event($self->{IRC}->{_pluggable_prefix} . "plugin_del" => $old_a => $old_p);
 
   $@ = "Plugin named '$new_a' already exists ($self->{PLUGS}{$new_a}", return
@@ -114,7 +119,8 @@ sub replace {
 
   my $return;
 
-  eval { $return = $new_p->plugin_register($self->{IRC}) };
+  my $register = "$self->{IRC}->{_pluggable_reg_prefix}register";
+  eval { $return = $new_p->$register($self->{IRC}) };
 
   if ($return) {
     $self->{PLUGS}{$new_p} = $new_a;
@@ -151,7 +157,8 @@ sub remove {
     ++$i;
   }
 
-  eval { $old_p->plugin_unregister($self->{IRC}) };
+  my $unregister = "$self->{IRC}->{_pluggable_reg_prefix}unregister";
+  eval { $old_p->$unregister($self->{IRC}) };
   $self->{IRC}->_pluggable_event($self->{IRC}->{_pluggable_prefix} . "plugin_del" => $old_a => $old_p);
 
   return wantarray ? ($old_p, $old_a) : $old_p;
@@ -202,7 +209,8 @@ sub insert_before {
 
   my $return;
 
-  eval { $return = $new_p->plugin_register($self->{IRC}) };
+  my $register = "$self->{IRC}->{_pluggable_reg_prefix}register";
+  eval { $return = $new_p->$register($self->{IRC}) };
 
   if ($return) {
     $self->{PLUGS}{$new_p} = $new_a;
@@ -236,7 +244,8 @@ sub insert_after {
 
   my $return;
 
-  eval { $return = $new_p->plugin_register($self->{IRC}) };
+  my $register = "$self->{IRC}->{_pluggable_reg_prefix}register";
+  eval { $return = $new_p->$register($self->{IRC}) };
 
   if ($return) {
     $self->{PLUGS}{$new_p} = $new_a;
