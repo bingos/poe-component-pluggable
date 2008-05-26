@@ -611,7 +611,9 @@ Chris 'BinGOs' Williams <chris@bingosnet.co.uk>
 
 Copyright C<(c)> Chris Williams, Apocalypse and Jeff Pinyan
 
-This module may be used, modified, and distributed under the same terms as Perl itself. Please see the license that came with your Perl distribution for details.
+This module may be used, modified, and distributed under the same terms as
+Perl itself. Please see the license that came with your Perl distribution for
+details.
 
 =head1 KUDOS
 
@@ -623,6 +625,9 @@ which improved on it.
 
 All the happy chappies who have contributed to POE::Component::IRC over the 
 years (yes, it has been years) refining and tweaking the plugin system.
+
+The initial idea was heavily borrowed from X-Chat, BIG thanks goes out to the
+genius that came up with the EAT_* system :)
 
 =head1 SEE ALSO
 
