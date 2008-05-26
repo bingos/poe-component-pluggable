@@ -7,7 +7,7 @@ use vars qw($VERSION);
 $VERSION = '1.06';
 
 sub new {
-  my ($class, $object, $prefix) = @_;
+  my ($class, $object) = @_;
 
   return bless {
     PLUGS => {},
