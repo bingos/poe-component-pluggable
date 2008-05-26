@@ -220,356 +220,373 @@ POE::Component::Pluggable - A base class for creating plugin enabled POE Compone
 
 =head1 SYNOPSIS
 
-  # A simple POE Component that sends ping events to registered sessions
-  # every 30 seconds. A rather convoluted example to be honest.
+ # A simple POE Component that sends ping events to registered sessions
+ # every 30 seconds. A rather convoluted example to be honest.
 
-  {
-    package SimplePoCo;
+ {
+     package SimplePoCo;
   
-    use strict;
-    use base qw(POE::Component::Pluggable);
-    use POE;
-    use POE::Component::Pluggable::Constants qw(:ALL);
+     use strict;
+     use base qw(POE::Component::Pluggable);
+     use POE;
+     use POE::Component::Pluggable::Constants qw(:ALL);
   
-    sub spawn {
-      my $package = shift;
-      my %opts = @_;
-      $opts{lc $_} = delete $opts{$_} for keys %opts;
-      my $self = bless \%opts, $package;
-      $self->_pluggable_init( prefix => 'simplepoco_' );
-      $self->{session_id} = POE::Session->create(
-  	object_states => [
-  		$self => { shutdown => '_shutdown' },
-  		$self => [qw(_send_ping _start register unregister __send_event)],
-  	],
-  	heap => $self,
-      )->ID();
-      return $self;
-    }
+     sub spawn {
+         my ($package, %opts) = @_;
+         $opts{lc $_} = delete $opts{$_} for keys %opts;
+         my $self = bless \%opts, $package;
+         
+         $self->_pluggable_init(prefix => 'simplepoco_');
+         POE::Session->create(
+  	     object_states => [
+  	         $self => { shutdown => '_shutdown' },
+  		 $self => [qw(_send_ping _start register unregister __send_event)],
+  	     ],
+  	     heap => $self,
+         );
+         
+         return $self;
+     }
   
-    sub shutdown {
-      my $self = shift;
-      $poe_kernel->post( $self->{session_id}, 'shutdown' );
-    }
+     sub shutdown {
+         my ($self) = @_;
+         $poe_kernel->post($self->{session_id}, 'shutdown');
+     }
   
-    sub _pluggable_event {
-      my $self = shift;
-      $poe_kernel->post( $self->{session_id}, '__send_event', @_ );
-    }
+     sub _pluggable_event {
+         my ($self) = @_;
+         $poe_kernel->post($self->{session_id}, '__send_event', @_);
+     }
   
-    sub _start {
-      my ($kernel,$self) = @_[KERNEL,OBJECT];
-      $self->{session_id} = $_[SESSION]->ID();
-      if ( $self->{alias} ) {
-  	$kernel->alias_set( $self->{alias} );
-      }
-      else {
-  	$kernel->refcount_increment( $self->{session_id}, __PACKAGE__ );
-      }
-      $kernel->delay( '_send_ping', $self->{time} || 300 );
-      return;
-    }
+     sub _start {
+         my ($kernel,$self) = @_[KERNEL,OBJECT];
+         $self->{session_id} = $_[SESSION]->ID();
+         
+         if ($self->{alias}) {
+  	     $kernel->alias_set($self->{alias});
+         }
+         else {
+  	     $kernel->refcount_increment($self->{session_id}, __PACKAGE__);
+         }
+      
+         $kernel->delay(_send_ping => $self->{time} || 300);
+         return;
+     }
   
-    sub _shutdown {
-      my ($kernel,$self) = @_[KERNEL,OBJECT];
-      $self->_pluggable_destroy();
-      $kernel->alarm_remove_all();
-      $self->alias_remove($_) for $kernel->alias_list();
-      $kernel->refcount_decrement( $self->{session_id}, __PACKAGE__ ) unless $self->{alias};
-      $kernel->refcount_decrement( $_, __PACKAGE__ ) for keys %{ $self->{sessions} };
-      return;
-    }
+     sub _shutdown {
+          my ($kernel, $self) = @_[KERNEL, OBJECT];
+          $self->_pluggable_destroy();
+          $kernel->alarm_remove_all();
+          $self->alias_remove($_) for $kernel->alias_list();
+          $kernel->refcount_decrement($self->{session_id}, __PACKAGE__) if !$self->{alias};
+          $kernel->refcount_decrement($_, __PACKAGE__) for keys %{ $self->{sessions} };
+         
+          return;
+     }
   
-    sub register {
-      my ($kernel,$sender,$self) = @_[KERNEL,SENDER,OBJECT];
-      my $sender_id = $sender->ID();
-      $self->{sessions}->{ $sender_id }++;
-      if ( $self->{sessions}->{ $sender_id } == 1 ) { 
-        $kernel->refcount_increment( $sender_id, __PACKAGE__ );
-        $kernel->yield( __send_event => $self->{_pluggable_prefix} . 'registered', $sender_id );
-      }
-      return;
-    }
+     sub register {
+         my ($kernel, $sender, $self) = @_[KERNEL, SENDER, OBJECT];
+         my $sender_id = $sender->ID();
+         $self->{sessions}->{$sender_id}++;
+         
+         if ($self->{sessions}->{$sender_id} == 1) { 
+             $kernel->refcount_increment($sender_id, __PACKAGE__);
+             $kernel->yield(__send_event => $self->{_pluggable_prefix} . 'registered', $sender_id);
+         }
+         
+         return;
+     }
   
-    sub unregister {
-      my ($kernel,$sender,$self) = @_[KERNEL,SENDER,OBJECT];
-      my $sender_id = $sender->ID();
-      my $record = delete $self->{sessions}->{ $sender_id };
-      if ( $record ) {
-        $kernel->refcount_decrement( $sender_id, __PACKAGE__ );
-        $kernel->yield( __send_event => $self->{_pluggable_prefix} . 'unregistered', $sender_id );
-      }
-      return;
-    }
+     sub unregister {
+         my ($kernel, $sender, $self) = @_[KERNEL, SENDER, OBJECT];
+         my $sender_id = $sender->ID();
+         my $record = delete $self->{sessions}->{$sender_id};
+         
+         if ($record) {
+             $kernel->refcount_decrement($sender_id, __PACKAGE__);
+             $kernel->yield(__send_event => $self->{_pluggable_prefix} . 'unregistered', $sender_id);
+         }
+         
+         return;
+     }
   
-    sub __send_event {
-      my ($kernel,$self,$event,@args) = @_[KERNEL,OBJECT,ARG0,ARG1..$#_];
+     sub __send_event {
+         my ($kernel, $self, $event, @args) = @_[KERNEL, OBJECT, ARG0..$#_];
   
-      return 1 if $self->_pluggable_process( 'PING', $event, \( @args ) ) == PLUGIN_EAT_ALL;
+         return 1 if $self->_pluggable_process(PING => $event, \(@args)) == PLUGIN_EAT_ALL;
   
-      $kernel->post( $_, $event, @args ) for keys %{ $self->{sessions} };
-    }
+         $kernel->post($_, $event, @args) for keys %{ $self->{sessions} };
+     }
   
-    sub _send_ping {
-      my ($kernel,$self) = @_[KERNEL,OBJECT];
-      my $event = $self->{_pluggable_prefix} . 'ping';
-      my @args = ('Wake up sleepy');
-      $kernel->yield( '__send_event', $event, @args );
-      $kernel->delay( '_send_ping', $self->{time} || 300 );
-      return;
-    }
-  }
+     sub _send_ping {
+         my ($kernel, $self) = @_[KERNEL, OBJECT];
+         my $event = $self->{_pluggable_prefix} . 'ping';
+         my @args = ('Wake up sleepy');
+         $kernel->yield(__send_event => $event, @args);
+         $kernel->delay(_send_ping => $self->{time} || 300);
+         
+         return;
+     }
+ }       
   
-  use POE;
+     use POE;
   
-  my $pluggable = SimplePoCo->spawn( alias => 'pluggable', time => 30 );
+     my $pluggable = SimplePoCo->spawn(
+         alias => 'pluggable',
+         time => 30,
+     );
   
-  POE::Session->create(
-  	package_states => [
-  		'main' => [qw(_start simplepoco_registered simplepoco_ping)],
-  	],
-  );
+     POE::Session->create(
+         package_states => [
+  	     main => [qw(_start simplepoco_registered simplepoco_ping)],
+  	 ],
+     );
   
-  $poe_kernel->run();
-  exit 0;
+     $poe_kernel->run();
   
-  sub _start {
-    my ($kernel,$heap) = @_[KERNEL,HEAP];
-    $kernel->post( 'pluggable', 'register' );
-    return;
-  }
+     sub _start {
+         my ($kernel, $heap) = @_[KERNEL, HEAP];
+         $kernel->post(pluggable => 'register');
+         return;
+     }
   
-  sub simplepoco_registered {
-    print "Yay, we registered\n";
-    return;
-  }
+     sub simplepoco_registered {
+         print "Yay, we registered\n";
+         return;
+     }
   
-  sub simplepoco_ping {
-    my ($sender,$text) = @_[SENDER,ARG0];
-    print "Got '$text' from ", $sender->ID, "\n";
-    return;
-  }
+     sub simplepoco_ping {
+         my ($sender, $text) = @_[SENDER, ARG0];
+         print "Got '$text' from ", $sender->ID, "\n";
+         return;
+     }
 
 =head1 DESCRIPTION
 
-POE::Component::Pluggable is a base class for creating plugin enabled POE Components. It is a
-generic port of L<POE::Component::IRC>'s plugin system.
+POE::Component::Pluggable is a base class for creating plugin enabled POE
+Components. It is a generic port of L<POE::Component::IRC|POE::Component::IRC>'s
+plugin system.
 
-If your component dispatches events to registered POE sessions then POE::Component::Pluggable may
-be a good fit for you.
+If your component dispatches events to registered POE sessions, then
+POE::Component::Pluggable may be a good fit for you.
 
-Basic use would involve subclassing POE::Component::Pluggable, then overriding _pluggable_event()
-and inserting _pluggable_process() wherever you dispatch events from.
+Basic use would involve subclassing POE::Component::Pluggable, then
+overriding C<_pluggable_event()> and inserting C<_pluggable_process()>
+wherever you dispatch events from.
 
-Users of your component can then load plugins using the plugin methods provided to handle events
-generated by the component.
+Users of your component can then load plugins using the plugin methods
+provided to handle events generated by the component.
 
-You may also use plugin style handlers within your component as _pluggable_process() will attempt to
-process any events with local method calls first. The return value of these handlers has the same 
-significance as the return value of 'normal' plugin handlers.
+You may also use plugin style handlers within your component as
+C<_pluggable_process()> will attempt to process any events with local method
+calls first. The return value of these handlers has the same significance as
+the return value of 'normal' plugin handlers.
 
 =head1 PRIVATE METHODS
 
-Subclassing POE::Component::Pluggable gives your object the following 'private' methods:
+Subclassing POE::Component::Pluggable gives your object the following 'private'
+methods:
 
-=over
+=head2 C<_pluggable_init>
 
-=item _pluggable_init
+This should be called on your object after initialisation, but before you want
+to start processing plugins. It accepts a number of argument/value pairs:
 
-This should be called on your object after initialisation, but before you want to start processing plugins.
-It accepts a number of argument/value pairs:
+ 'prefix', the prefix for your events (default: 'pluggable_');
+ 'reg_prefix', the prefix for the register()/unregister() plugin methods 
+               (default: 'plugin_');
+ 'types', an arrayref of the types of events that your poco will support,
+          OR a hashref with the event types as keys and their abbrevations
+          (used as plugin event method prefixes) as values;
 
-  'prefix', the prefix for your events (default: 'pluggable_');
-  'reg_prefix', the prefix for the register()/unregister() plugin methods (default: 'plugin_');
-  'types', an arrayref of the types of events that your poco will support, OR a hashref with
-           the event types as keys and their abbrevations (used as plugin event method prefixes)
-           as values;
+Notes: 'prefix' should probably end with a '_'. The types specify the prefixes
+for plugin handlers. You can specify as many different types as you require. 
 
-Notes: 'prefix' should probably end with a '_'. The types specify the prefixes for plugin handlers. You can specify as many different types as you require. 
+=head2 C<_pluggable_destroy>
 
-=item _pluggable_destroy
+This should be called from any shutdown handler that your poco has. The method
+unloads any loaded plugins.
 
-This should be called from any shutdown handler that your poco has. The method unloads any loaded plugins.
+=head2 C<_pluggable_process>
 
-=item _pluggable_process
+This should be called before events are dispatched to interested sessions.
+This gives pluggable a chance to discard events if requested to by a plugin.
 
-This should be called before events are dispatched to interested sessions. This gives pluggable a chance to
-discard events if requested to by a plugin.
+The first argument is a type, as specified to C<_pluggable_init()>.
 
-The first argument is a type, as specified to _pluggable_init().
-
-  sub _dispatch {
-    # stuff
+ sub _dispatch {
+     # stuff
     
-    return 1 if $self->_pluggable_process( $type, $event, \( @args ) ) == PLUGIN_EAT_ALL;
+     return 1 if $self->_pluggable_process($type, $event, \(@args)) == PLUGIN_EAT_ALL;
 
-    # dispatch event to interested sessions.
-  }
+     # dispatch event to interested sessions.
+ }
 
-This example demonstrates event arguments being passed as scalar refs to the plugin system. This 
-enables plugins to mangle the arguments if necessary. 
+This example demonstrates event arguments being passed as scalar refs to the
+plugin system. This enables plugins to mangle the arguments if necessary. 
 
-=item _pluggable_event
+=head2 C<_pluggable_event>
 
-This method should be overridden in your class so that pipeline can dispatch events through your event
-dispatcher. Pipeline sends a prefixed 'plugin_add' and 'plugin_del' event whenever plugins are added or
-removed, respectively.
+This method should be overridden in your class so that pipeline can dispatch
+events through your event dispatcher. Pipeline sends a prefixed 'plugin_add'
+and 'plugin_del' event whenever plugins are added or removed, respectively.
 
-  sub _pluggable_event {
+ sub _pluggable_event {
      my $self = shift;
-     $poe_kernel->post( $self->{session_id}, '__send_event', @_ );
-  }
+     $poe_kernel->post($self->{session_id}, '__send_event', @_);
+ }
 
 There is an example of this in the SYNOPSIS.
 
-=back
-
 =head1 PUBLIC METHODS
 
-Subclassing POE::Component::Pluggable gives your object the following public methods:
+Subclassing POE::Component::Pluggable gives your object the following public
+methods:
 
-=over
+=head2 C<pipeline>
 
-=item pipeline
+Returns the L<POE::Component::Pluggable::Pipeline|POE::Component:::Pluggable::Pipeline>
+object.
 
-Returns the L<POE::Component::Pluggable::Pipeline> object.
-
-=item plugin_add
+=head2 C<plugin_add>
 
 Accepts two arguments:
 
-  The alias for the plugin
-  The actual plugin object
+ The alias for the plugin
+ The actual plugin object
 
-The alias is there for the user to refer to it, as it is possible to have multiple
-plugins of the same kind active in one POE::Component::Pluggable object.
+The alias is there for the user to refer to it, as it is possible to have
+multiple plugins of the same kind active in one POE::Component::Pluggable
+object.
 
-This method goes through the pipeline's push() method.
+This method goes through the pipeline's C<push()> method, which will call
+C<$plugin->plugin_register($pluggable)>.
 
- This method will call $plugin->plugin_register( $pluggable )
+Returns the number of plugins now in the pipeline if plugin was initialized,
+C<undef>/an empty list if not.
 
-Returns the number of plugins now in the pipeline if plugin was initialized, undef
+=head2 C<plugin_del>
+
+Accepts one argument:
+
+ The alias for the plugin or the plugin object itself
+
+This method goes through the pipeline's C<remove()> method, which will call
+C<$plugin->plugin_unregister($pluggable)>.
+
+Returns the plugin object if the plugin was removed, C<undef>/an empty list
 if not.
 
-=item plugin_del
+=head2 C<plugin_get>
 
 Accepts one argument:
 
-  The alias for the plugin or the plugin object itself
+ The alias for the plugin
 
-This method goes through the pipeline's remove() method.
+This method goes through the pipeline's C<get()> method.
 
-This method will call $plugin->plugin_unregister( $object )
+Returns the plugin object if it was found, C<undef>/an empty list if not.
 
-Returns the plugin object if the plugin was removed, undef if not.
+=head2 C<plugin_list>
 
-=item plugin_get
+Takes no arguments.
 
-Accepts one argument:
+Returns a hashref of plugin objects, keyed on alias, or an empty list if
+there are no plugins loaded.
 
-  The alias for the plugin
+=head2 C<plugin_order>
 
-This method goes through the pipeline's get() method.
+Takes no arguments.
 
-Returns the plugin object if it was found, undef if not.
+Returns an arrayref of plugin objects, in the order which they are
+encountered in the pipeline.
 
-=item plugin_list
-
-Has no arguments.
-
-Returns a hashref of plugin objects, keyed on alias, or an empty list if there are no
-plugins loaded.
-
-=item plugin_order
-
-Has no arguments.
-
-Returns an arrayref of plugin objects, in the order which they are encountered in the
-pipeline.
-
-=item plugin_register
+=head2 C<plugin_register>
 
 Accepts the following arguments:
 
-  The plugin object
-  The type of the hook ( the hook types are specified with _pluggable_init()'s 'types' )
-  The event name(s) to watch
+ The plugin object
+ The type of the hook (the hook types are specified with _pluggable_init()'s 'types')
+ The event name[s] to watch
 
 The event names can be as many as possible, or an arrayref. They correspond
 to the prefixed events and naturally, arbitrary events too.
 
-You do not need to supply events with the prefix in front of them, just the names.
+You do not need to supply events with the prefix in front of them, just the
+names.
 
 It is possible to register for all events by specifying 'all' as an event.
 
-Returns 1 if everything checked out fine, undef if something's seriously wrong
+Returns 1 if everything checked out fine, C<undef>/an empty list if something
+is seriously wrong.
 
-=item plugin_unregister
+=head2 C<plugin_unregister>
 
 Accepts the following arguments:
 
-  The plugin object
-  The type of the hook ( the hook types are specified with _pluggable_init()'s 'types' )
-  The event name(s) to unwatch
+ The plugin object
+ The type of the hook (the hook types are specified with _pluggable_init()'s 'types')
+ The event name[s] to unwatch
 
 The event names can be as many as possible, or an arrayref. They correspond
 to the prefixed events and naturally, arbitrary events too.
 
-You do not need to supply events with the prefix in front of them, just the names.
+You do not need to supply events with the prefix in front of them, just the
+names.
 
 It is possible to register for all events by specifying 'all' as an event.
 
-Returns 1 if all the event name(s) was unregistered, undef if some was not found.
-
-=back
+Returns 1 if all the event name[s] was unregistered, undef if some was not
+found.
 
 =head1 PLUGINS
 
 The basic anatomy of a pluggable plugin is:
 
-        # Import the constants, of course you could provide your own 
-        # constants as long as they map correctly.
-        use POE::Component::Pluggable::Constants qw( :ALL );
+ # Import the constants, of course you could provide your own 
+ # constants as long as they map correctly.
+ use POE::Component::Pluggable::Constants qw( :ALL );
 
-        # Our constructor
-        sub new {
-                ...
-        }
+ # Our constructor
+ sub new {
+     ...
+ }
 
-        # Required entry point for pluggable plugins
-        sub plugin_register {
-                my( $self, $pluggable ) = @_;
+ # Required entry point for pluggable plugins
+ sub plugin_register {
+     my($self, $pluggable) = @_;
 
-                # Register events we are interested in
-                $pluggable->plugin_register( $self, 'SERVER', qw(something whatever) );
+     # Register events we are interested in
+     $pluggable->plugin_register($self, 'SERVER', qw(something whatever));
 
-                # Return success
-                return 1;
-        }
+     # Return success
+     return 1;
+ }
 
-        # Required exit point for pluggable
-        sub plugin_unregister {
-                my( $self, $pluggable ) = @_;
+ # Required exit point for pluggable
+ sub plugin_unregister {
+     my($self, $pluggable) = @_;
 
-                # Pluggable will automatically unregister events for the plugin
+     # Pluggable will automatically unregister events for the plugin
 
-                # Do some cleanup...
+     # Do some cleanup...
 
-                # Return success
-                return 1;
-        }
+     # Return success
+     return 1;
+ }
 
-        sub _default {
-                my( $self, $pluggable, $event ) = splice @_, 0, 3;
+ sub _default {
+     my($self, $pluggable, $event) = splice @_, 0, 3;
 
-                print "Default called for $event\n";
+     print "Default called for $event\n";
 
-                # Return an exit code
-                return PLUGIN_EAT_NONE;
-        }
+     # Return an exit code
+     return PLUGIN_EAT_NONE;
+ }
 
-The constants used can be called anything. You can provide your own even. Check 
-L<POE::Component::Pluggable::Constants> for details.
+The constants used can be called anything. You can provide your own even.
+Check L<POE::Component::Pluggable::Constants|POE::Component::Pluggable::Constands>
+for details.
 
 =head1 TODO
 
@@ -587,18 +604,23 @@ This module may be used, modified, and distributed under the same terms as Perl 
 
 =head1 KUDOS
 
-APOCAL for writing the original L<POE::Component::IRC> plugin system.
+APOCAL for writing the original L<POE::Component::IRC|POE::Component::IRC>
+plugin system.
 
-japhy for writing L<POE::Component::IRC::Pipeline> which improved on it.
+japhy for writing L<POE::Component::IRC::Pipeline|POE::Component::IRC::Pipeline>
+which improved on it.
 
 All the happy chappies who have contributed to POE::Component::IRC over the 
-years ( yes, it has been years ) refining and tweaking the plugin system.
+years (yes, it has been years) refining and tweaking the plugin system.
 
 =head1 SEE ALSO
 
-L<POE::Component::IRC>
+L<POE::Component::IRC|POE::Component::IRC>
 
-L<POE::Component::Pluggable::Pipeline>
+L<POE::Component::Pluggable::Pipeline|POE::Component::Pluggable::Pipeline>
 
-Both L<POE::Component::Client::NNTP> and L<POE::Component::Server::NNTP> use this module
+Both L<POE::Component::Client::NNTP|POE::Component::Client::NNTP> and
+L<POE::Component::Server::NNTP|POE::Component::Server::NNTP> use this module
 as a base, examination of their source may yield further understanding.
+
+=cut
