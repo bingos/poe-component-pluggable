@@ -592,9 +592,12 @@ The basic anatomy of a pluggable plugin is:
      return PLUGIN_EAT_NONE;
  }
 
-The constants used can be called anything. You can provide your own even.
-Check L<POE::Component::Pluggable::Constants|POE::Component::Pluggable::Constands>
-for details.
+As shown in the example above, a plugin's C<_default> subroutine (if present)
+is called if the plugin receives an event for which it has no handler.
+
+The special exit code CONSTANTS are documented in
+L<POE::Component::Pluggable::Constants|POE::Component::Pluggable::Constants>.
+You could provide your own as long as the values match up, though.
 
 =head1 TODO
 

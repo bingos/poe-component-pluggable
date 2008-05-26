@@ -40,17 +40,29 @@ required by the plugin system.
 
 Value: 1
 
+This means the event will continue to be processed by remaining plugins and
+finally, sent to interested sessions that registered for it.
+
 =head2 PLUGIN_EAT_CLIENT
 
 Value: 2
+
+This means the event will continue to be processed by remaining plugins but
+it will not be sent to any sessions that registered for it.
 
 =head2 PLUGIN_EAT_PLUGIN
 
 Value: 3
 
+This means the event will not be processed by remaining plugins, it will go
+straight to interested sessions.
+
 =head2 PLUGIN_EAT_ALL
 
 Value: 4
+
+This means the event will be completely discarded, no plugin or session will
+see it.
 
 =head1 MAINTAINER
 
