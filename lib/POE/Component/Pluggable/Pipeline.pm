@@ -298,7 +298,8 @@ __END__
 
 =head1 NAME
 
-POE::Component::Pluggable::Pipeline - the plugin pipeline for POE::Component::Pluggable.
+POE::Component::Pluggable::Pipeline - the plugin pipeline for
+POE::Component::Pluggable.
 
 =head1 SYNOPSIS
 

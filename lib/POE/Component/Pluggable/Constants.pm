@@ -22,37 +22,35 @@ __END__
 
 =head1 NAME
 
-POE::Component::Pluggable::Constants - importable constants for POE::Component::Pluggable
+POE::Component::Pluggable::Constants - importable constants for
+POE::Component::Pluggable
 
 =head1 SYNOPSIS
 
-  use POE::Component::Pluggable::Constants qw(:ALL);
+ use POE::Component::Pluggable::Constants qw(:ALL);
 
 =head1 DESCRIPTION
 
-POE::Component::Pluggable::Constants defines a number of constants that are required by the plugin system.
+POE::Component::Pluggable::Constants defines a number of constants that are
+required by the plugin system.
 
 =head1 EXPORTS
 
-=over
-
-=item PLUGIN_EAT_NONE
+=head2 PLUGIN_EAT_NONE
 
 Value: 1
 
-=item PLUGIN_EAT_CLIENT
+=head2 PLUGIN_EAT_CLIENT
 
 Value: 2
 
-=item PLUGIN_EAT_PLUGIN
+=head2 PLUGIN_EAT_PLUGIN
 
 Value: 3
 
-=item PLUGIN_EAT_ALL
+=head2 PLUGIN_EAT_ALL
 
 Value: 4
-
-=back
 
 =head1 MAINTAINER
 
@@ -60,4 +58,6 @@ Chris 'BinGOs' Williams <chris@bingosnet.co.uk>
 
 =head1 SEE ALSO
 
-L<POE::Component::Pluggable>
+L<POE::Component::Pluggable|POE::Component::Pluggable>
+
+=cut
