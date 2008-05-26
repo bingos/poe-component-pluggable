@@ -459,7 +459,7 @@ Accepts one argument:
 
 This method goes through the pipeline's remove() method.
 
-This method will call $plugin->plugin_unregister( $irc )
+This method will call $plugin->plugin_unregister( $object )
 
 Returns the plugin object if the plugin was removed, undef if not.
 
