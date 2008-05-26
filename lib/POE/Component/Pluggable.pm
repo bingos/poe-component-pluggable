@@ -626,7 +626,7 @@ which improved on it.
 All the happy chappies who have contributed to POE::Component::IRC over the 
 years (yes, it has been years) refining and tweaking the plugin system.
 
-The initial idea was heavily borrowed from X-Chat, BIG thanks goes out to the
+The initial idea was heavily borrowed from X-Chat, BIG thanks go out to the
 genius that came up with the EAT_* system :)
 
 =head1 SEE ALSO
