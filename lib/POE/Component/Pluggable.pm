@@ -2,6 +2,7 @@ package POE::Component::Pluggable;
 
 use strict;
 use warnings;
+use Carp;
 use POE::Component::Pluggable::Pipeline;
 use POE::Component::Pluggable::Constants qw(:ALL);
 use vars qw($VERSION);
@@ -34,6 +35,12 @@ sub _pluggable_event {
 
 sub _pluggable_process {
   my ($self, $type, $event, @args) = @_;
+
+  if (!defined $type || !defined $event) {
+    carp 'Please supply an event type and name';
+    return;
+  }
+
   my $pipeline = $self->pipeline;
   my $prefix = $self->{_pluggable_prefix};
   $event =~ s/^\Q$prefix\E//;
@@ -88,7 +95,7 @@ sub plugin_add {
   my $pipeline = $self->pipeline;
 
   unless (defined $name and defined $plugin) {
-    warn 'Please supply a name and the plugin object to be added!';
+    carp 'Please supply a name and the plugin object to be added!';
     return;
   }
 
@@ -100,7 +107,7 @@ sub plugin_del {
   my ($self, $name) = @_;
 
   unless (defined $name) {
-    warn 'Please supply a name/object for the plugin to be removed!';
+    carp 'Please supply a name/object for the plugin to be removed!';
     return;
   }
 
@@ -114,7 +121,7 @@ sub plugin_get {
   my ($self, $name) = @_;  
 
   unless (defined $name) {
-    warn 'Please supply a name/object for the plugin to be removed!';
+    carp 'Please supply a name/object for the plugin to be removed!';
     return;
   }
 
@@ -145,17 +152,17 @@ sub plugin_register {
   my $pipeline = $self->pipeline;
 
   unless ( grep { $_ eq $type } keys %{ $self->{_pluggable_types} } ) {
-    warn "That type: '$type', is not supported!";
+    carp "The type '$type' is not supported!";
     return;
   }
 
   unless (defined $plugin) {
-    warn 'Please supply the plugin object to register!';
+    carp 'Please supply the plugin object to register!';
     return;
   }
 
   unless (@events) {
-    warn 'Please supply at least one event to register!';
+    carp 'Please supply at least one event to register!';
     return;
   }
 
@@ -176,17 +183,17 @@ sub plugin_unregister {
   my $pipeline = $self->pipeline;
 
   unless ( grep { $_ eq $type } keys %{ $self->{_pluggable_types} } ) {
-    warn "That type: '$type', is not supported!";
+    carp "The type '$type' is not supported!";
     return;
   }
 
   unless (defined $plugin) {
-    warn 'Please supply the plugin object to register!';
+    carp 'Please supply the plugin object to register!';
     return;
   }
 
   unless (@events) {
-    warn 'Please supply at least one event to unregister!';
+    carp 'Please supply at least one event to unregister!';
     return;
   }
 
@@ -194,7 +201,7 @@ sub plugin_unregister {
     if (ref($ev) and ref($ev) eq "ARRAY") {
       for my $e (map lc, @$ev) {
         unless (delete $pipeline->{HANDLES}{$plugin}{$type}{$e}) {
-          warn "The event '$e' does not exist!";
+          carp "The event '$e' does not exist!";
           next;
         }
       }
@@ -202,7 +209,7 @@ sub plugin_unregister {
     else {
       $ev = lc $ev;
       unless (delete $pipeline->{HANDLES}{$plugin}{$type}{$ev}) {
-        warn "The event '$ev' does not exist!";
+        carp "The event '$ev' does not exist!";
         next;
       }
     }

@@ -2,6 +2,7 @@ package POE::Component::Pluggable::Pipeline;
 
 use strict;
 use warnings;
+use Carp;
 use vars qw($VERSION);
 
 $VERSION = '1.06';
@@ -265,7 +266,7 @@ sub bump_up {
 
   my $pos = $idx - $diff;
 
-  warn "$idx - $diff is negative, moving to head of the pipeline"
+  carp "$idx - $diff is negative, moving to head of the pipeline"
     if $pos < 0;
 
   splice(@$pipeline, $pos, 0, splice(@$pipeline, $idx, 1));
@@ -284,7 +285,7 @@ sub bump_down {
 
   my $pos = $idx + $diff;
 
-  warn "$idx + $diff is too high, moving to back of the pipeline"
+  carp "$idx + $diff is too high, moving to back of the pipeline"
     if $pos >= @$pipeline;
 
   splice(@$pipeline, $pos, 0, splice(@$pipeline, $idx, 1));
