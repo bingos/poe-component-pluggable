@@ -65,12 +65,13 @@ sub _pluggable_process {
 
     my $ret = PLUGIN_EAT_NONE;
 
+    my $alias = ($pipeline->get($plugin))[1];
     if ( $plugin->can($sub) ) {
       eval { $ret = $plugin->$sub($self,@args) };
-      warn "$sub call failed with $@\n" if $@ and $self->{_pluggable_debug};
+      warn "${alias}->$sub call failed with $@\n" if $@ and $self->{_pluggable_debug};
     } elsif ( $plugin->can('_default') ) {
       eval { $ret = $plugin->_default($self,$sub,@args) };
-      warn "_default call failed with $@\n" if $@ and $self->{_pluggable_debug};
+      warn "${alias}->_default call failed with $@\n" if $@ and $self->{_pluggable_debug};
     }
 
     return $return if $ret == PLUGIN_EAT_PLUGIN;
