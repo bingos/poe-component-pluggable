@@ -16,7 +16,6 @@ sub _pluggable_init {
   $self->{_pluggable_prefix} = 'pluggable_' unless $self->{_pluggable_prefix};
   if (ref $self->{_pluggable_types} eq 'ARRAY') {
     $self->{_pluggable_types} = { map { ($_ => $_)  } @{ $self->{_pluggable_types} } };
-    print Dumper($self->{_pluggable_types});
   }
   elsif (ref $self->{_pluggable_types} ne 'HASH') {
     $self->{_pluggable_types} = {};
