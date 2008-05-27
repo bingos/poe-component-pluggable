@@ -10,17 +10,19 @@ use vars qw($VERSION);
 $VERSION='1.06';
 
 sub _pluggable_init {
-  my $self = shift;
-  my %opts = @_;
+  my ($self, %opts) = @_;
+  
   $self->{'_pluggable_' . lc $_} = delete $opts{$_} for keys %opts;
   $self->{_pluggable_reg_prefix} = 'plugin_' unless $self->{_pluggable_reg_prefix};
   $self->{_pluggable_prefix} = 'pluggable_' unless $self->{_pluggable_prefix};
+  
   if (ref $self->{_pluggable_types} eq 'ARRAY') {
     $self->{_pluggable_types} = { map { ($_ => $_)  } @{ $self->{_pluggable_types} } };
   }
   elsif (ref $self->{_pluggable_types} ne 'HASH') {
     $self->{_pluggable_types} = {};
   }
+  
   return 1;
 }
 
@@ -85,22 +87,21 @@ sub _pluggable_process {
 # accesses the plugin pipeline
 sub pipeline {
   my ($self) = @_;
-  $self->{_PLUGINS} = POE::Component::Pluggable::Pipeline->new($self)
-    unless UNIVERSAL::isa($self->{_PLUGINS}, 'POE::Component::Pluggable::Pipeline');
+  eval { $self->{_PLUGINS}->isa('POE::Component::Pluggble::Pipeline') };
+  $self->{_PLUGINS} = POE::Component::Pluggable::Pipeline->new($self) if $@;
   return $self->{_PLUGINS};
 }
 
 # Adds a new plugin object
 sub plugin_add {
   my ($self, $name, $plugin) = @_;
-  my $pipeline = $self->pipeline;
 
   unless (defined $name and defined $plugin) {
     carp 'Please supply a name and the plugin object to be added!';
     return;
   }
 
-  return $pipeline->push($name => $plugin);
+  return $self->pipeline->push($name => $plugin);
 }
 
 # Removes a plugin object
@@ -133,12 +134,8 @@ sub plugin_get {
 sub plugin_list {
   my ($self) = @_;
   my $pipeline = $self->pipeline;
-  my %return;
-
-  for (@{ $pipeline->{PIPELINE} }) {
-    $return{ $pipeline->{PLUGS}{$_} } = $_;
-  }
-
+  
+  my %return = map {$pipeline->{PLUGS}->{$_} => $_} @{ $pipeline->{PIPELINE} };
   return \%return;
 }
 
@@ -168,7 +165,7 @@ sub plugin_register {
   }
 
   for my $ev (@events) {
-    if (ref($ev) and ref($ev) eq "ARRAY") {
+    if (ref($ev) and ref($ev) eq 'ARRAY') {
       @{ $pipeline->{HANDLES}{$plugin}{$type} }{ map lc, @$ev } = (1) x @$ev;
     }
     else {

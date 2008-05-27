@@ -8,14 +8,14 @@ use vars qw($VERSION);
 $VERSION = '1.06';
 
 sub new {
-  my ($class, $object) = @_;
+  my ($package, $pluggable) = @_;
 
   return bless {
     PLUGS => {},
     PIPELINE => [],
     HANDLES => {},
-    OBJECT => $object,
-  }, $class;
+    OBJECT => $pluggable,
+  }, $package;
 }
 
 sub push {
@@ -31,7 +31,7 @@ sub push {
     push @{ $self->{PIPELINE} }, $plug;
     $self->{PLUGS}{$alias} = $plug;
     $self->{PLUGS}{$plug} = $alias;
-    $self->{OBJECT}->_pluggable_event($self->{OBJECT}->{_pluggable_prefix} . "plugin_add" => $alias => $plug);
+    $self->{OBJECT}->_pluggable_event("$self->{OBJECT}->{_pluggable_prefix}plugin_add" => $alias => $plug);
     return scalar @{ $self->{PIPELINE} };
   }
   else { return }
@@ -49,9 +49,9 @@ sub pop {
   my $unregister = "$self->{OBJECT}->{_pluggable_reg_prefix}unregister";
 
   eval { $plug->$unregister($self->{OBJECT}) };
-  $self->{OBJECT}->_pluggable_event($self->{OBJECT}->{_pluggable_prefix} . "plugin_del" => $alias => $plug);
+  $self->{OBJECT}->_pluggable_event("$self->{OBJECT}->{_pluggable_prefix}plugin_del" => $alias => $plug);
 
-  return wantarray() ? ($plug, $alias) : $plug;
+  return wantarray ? ($plug, $alias) : $plug;
 }
 
 sub unshift {
@@ -68,7 +68,7 @@ sub unshift {
     unshift @{ $self->{PIPELINE} }, $plug;
     $self->{PLUGS}{$alias} = $plug;
     $self->{PLUGS}{$plug} = $alias;
-    $self->{OBJECT}->_pluggable_event($self->{OBJECT}->{_pluggable_prefix} . "plugin_add" => $alias => $plug);
+    $self->{OBJECT}->_pluggable_event("$self->{OBJECT}->{_pluggable_prefix}plugin_add" => $alias => $plug);
     return scalar @{ $self->{PIPELINE} };
   }
   else { return }
@@ -88,14 +88,14 @@ sub shift {
 
   my $unregister = "$self->{OBJECT}->{_pluggable_reg_prefix}unregister";
   eval { $plug->$unregister($self->{OBJECT}) };
-  $self->{OBJECT}->_pluggable_event($self->{OBJECT}->{_pluggable_prefix} . "plugin_del" => $alias => $plug);
+  $self->{OBJECT}->_pluggable_event("$self->{OBJECT}->{_pluggable_prefix}plugin_del" => $alias => $plug);
 
-  return wantarray() ? ($plug, $alias) : $plug;
+  return wantarray ? ($plug, $alias) : $plug;
 }
 
 sub replace {
   my ($self, $old, $new_a, $new_p) = @_;
-  my ($old_a, $old_p) = ref($old) ?
+  my ($old_a, $old_p) = ref $old ?
     ($self->{PLUGS}{$old}, $old) :
     ($old, $self->{PLUGS}{$old});
 
@@ -108,7 +108,7 @@ sub replace {
   
   my $unregister = "$self->{OBJECT}->{_pluggable_reg_prefix}unregister";
   eval { $old_p->$unregister($self->{OBJECT}) };
-  $self->{OBJECT}->_pluggable_event($self->{OBJECT}->{_pluggable_prefix} . "plugin_del" => $old_a => $old_p);
+  $self->{OBJECT}->_pluggable_event("$self->{OBJECT}->{_pluggable_prefix}plugin_del" => $old_a => $old_p);
 
   $@ = "Plugin named '$new_a' already exists ($self->{PLUGS}{$new_a}", return
     if $self->{PLUGS}{$new_a};
@@ -126,7 +126,7 @@ sub replace {
       $_ = $new_p, last if $_ == $old_p;
     }
 
-    $self->{OBJECT}->_pluggable_event($self->{OBJECT}->{_pluggable_prefix} . "plugin_add" => $new_a => $new_p);
+    $self->{OBJECT}->_pluggable_event("$self->{OBJECT}->{_pluggable_prefix}plugin_add" => $new_a => $new_p);
     return 1;
   }
   else { return }
@@ -134,7 +134,7 @@ sub replace {
 
 sub remove {
   my ($self, $old) = @_;
-  my ($old_a, $old_p) = ref($old) ?
+  my ($old_a, $old_p) = ref $old ?
     ($self->{PLUGS}{$old}, $old) :
     ($old, $self->{PLUGS}{$old});
 
@@ -154,14 +154,14 @@ sub remove {
 
   my $unregister = "$self->{OBJECT}->{_pluggable_reg_prefix}unregister";
   eval { $old_p->$unregister($self->{OBJECT}) };
-  $self->{OBJECT}->_pluggable_event($self->{OBJECT}->{_pluggable_prefix} . "plugin_del" => $old_a => $old_p);
+  $self->{OBJECT}->_pluggable_event("$self->{OBJECT}->{_pluggable_prefix}plugin_del" => $old_a => $old_p);
 
   return wantarray ? ($old_p, $old_a) : $old_p;
 }
 
 sub get {
   my ($self, $old) = @_;
-  my ($old_a, $old_p) = ref($old) ?
+  my ($old_a, $old_p) = ref $old ?
     ($self->{PLUGS}{$old}, $old) :
     ($old, $self->{PLUGS}{$old});
 
@@ -173,7 +173,7 @@ sub get {
 
 sub get_index {
   my ($self, $old) = @_;
-  my ($old_a, $old_p) = ref($old) ?
+  my ($old_a, $old_p) = ref $old ?
     ($self->{PLUGS}{$old}, $old) :
     ($old, $self->{PLUGS}{$old});
 
@@ -189,7 +189,7 @@ sub get_index {
 
 sub insert_before {
   my ($self, $old, $new_a, $new_p) = @_;
-  my ($old_a, $old_p) = ref($old) ?
+  my ($old_a, $old_p) = ref $old ?
     ($self->{PLUGS}{$old}, $old) :
     ($old, $self->{PLUGS}{$old});
 
@@ -215,7 +215,7 @@ sub insert_before {
       ++$i;
     }
 
-    $self->{OBJECT}->_pluggable_event($self->{OBJECT}->{_pluggable_prefix} . "plugin_add" => $new_a => $new_p);
+    $self->{OBJECT}->_pluggable_event("$self->{OBJECT}->{_pluggable_prefix}plugin_add" => $new_a => $new_p);
     return 1;
   }
   else { return }
@@ -223,7 +223,7 @@ sub insert_before {
 
 sub insert_after {
   my ($self, $old, $new_a, $new_p) = @_;
-  my ($old_a, $old_p) = ref($old) ?
+  my ($old_a, $old_p) = ref $old ?
     ($self->{PLUGS}{$old}, $old) :
     ($old, $self->{PLUGS}{$old});
 
@@ -249,7 +249,7 @@ sub insert_after {
       ++$i;
     }
 
-    $self->{OBJECT}->_pluggable_event($self->{OBJECT}->{_pluggable_prefix} . "plugin_add" => $new_a => $new_p);
+    $self->{OBJECT}->_pluggable_event("$self->{OBJECT}->{_pluggable_prefix}plugin_add" => $new_a => $new_p);
     return 1;
   }
   else { return }
