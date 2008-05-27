@@ -1,3 +1,4 @@
+use strict;
 use inc::Module::Install;
 name 'POE-Component-Pluggable';
 author 'Chris Williams <chris@bingosnet.co.uk>';
@@ -8,4 +9,5 @@ build_requires 'Test::More' => 0.47;
 perl_version '5.000';
 requires 'warnings::compat' => 0 if $] < 5.006;
 requires 'Carp' => 0;
+requires 'POE' => 1.0002;
 WriteAll();

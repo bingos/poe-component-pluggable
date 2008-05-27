@@ -1,7 +1,7 @@
 POE::Component::Pluggable
 =========================
 
-1.06
+1.06	Tue May 27 19:32:46 BST 2008
 	- Allow changing the _register()/_unregister() prefix (Hinrik)
 	- Allow abbreviating event prefixes in method names (Hinrik)
 	- Improved error handling somewhat (Hinrik) 
