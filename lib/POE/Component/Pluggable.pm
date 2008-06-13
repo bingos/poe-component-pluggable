@@ -7,7 +7,7 @@ use POE::Component::Pluggable::Pipeline;
 use POE::Component::Pluggable::Constants qw(:ALL);
 use vars qw($VERSION);
 
-$VERSION='1.06';
+$VERSION='1.08';
 
 sub _pluggable_init {
   my ($self, %opts) = @_;
@@ -43,6 +43,7 @@ sub _pluggable_process {
     return;
   }
 
+  $event = lc $event;
   my $pipeline = $self->pipeline;
   my $prefix = $self->{_pluggable_prefix};
   $event =~ s/^\Q$prefix\E//;
