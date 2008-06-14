@@ -1,7 +1,7 @@
 POE::Component::Pluggable
 =========================
 
-1.08
+1.08	Sat Jun 14 08:41:53 BST 2008
 	- Lower-case the event name before processing it (Hinrik)
 
 1.06	Tue May 27 19:32:46 BST 2008
