@@ -5,7 +5,7 @@ use warnings;
 use Carp;
 use vars qw($VERSION);
 
-$VERSION = '1.06';
+$VERSION = '1.10';
 
 sub new {
   my ($package, $pluggable) = @_;
