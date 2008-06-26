@@ -23,9 +23,7 @@ sub push {
   $@ = "Plugin named '$alias' already exists ($self->{PLUGS}{$alias})", return
     if $self->{PLUGS}{$alias};
 
-  my $return;
-  my $register = "$self->{OBJECT}->{_pluggable_reg_prefix}register";
-  eval { $return = $plug->$register($self->{OBJECT}) };
+  my $return = $self->_register($alias, $plug);
 
   if ($return) {
     push @{ $self->{PIPELINE} }, $plug;
@@ -46,9 +44,8 @@ sub pop {
   my $alias = delete $self->{PLUGS}{$plug};
   delete $self->{PLUGS}{$alias};
   delete $self->{HANDLES}{$plug};
-  my $unregister = "$self->{OBJECT}->{_pluggable_reg_prefix}unregister";
 
-  eval { $plug->$unregister($self->{OBJECT}) };
+  $self->_unregister($alias, $plug);
   $self->{OBJECT}->_pluggable_event("$self->{OBJECT}->{_pluggable_prefix}plugin_del" => $alias => $plug);
 
   return wantarray ? ($plug, $alias) : $plug;
@@ -59,10 +56,7 @@ sub unshift {
   $@ = "Plugin named '$alias' already exists ($self->{PLUGS}{$alias}", return
     if $self->{PLUGS}{$alias};
 
-  my $return;
-  my $register = "$self->{OBJECT}->{_pluggable_reg_prefix}register";
-
-  eval { $return = $plug->$register($self->{OBJECT}) };
+  my $return = $self->_register($alias, $plug);
 
   if ($return) {
     unshift @{ $self->{PIPELINE} }, $plug;
@@ -86,8 +80,7 @@ sub shift {
   delete $self->{PLUGS}{$alias};
   delete $self->{HANDLES}{$plug};
 
-  my $unregister = "$self->{OBJECT}->{_pluggable_reg_prefix}unregister";
-  eval { $plug->$unregister($self->{OBJECT}) };
+  $self->_unregister($alias, $plug);
   $self->{OBJECT}->_pluggable_event("$self->{OBJECT}->{_pluggable_prefix}plugin_del" => $alias => $plug);
 
   return wantarray ? ($plug, $alias) : $plug;
@@ -106,17 +99,13 @@ sub replace {
   delete $self->{PLUGS}{$old_a};
   delete $self->{HANDLES}{$old_p};
   
-  my $unregister = "$self->{OBJECT}->{_pluggable_reg_prefix}unregister";
-  eval { $old_p->$unregister($self->{OBJECT}) };
+  $self->_unregister($old_a, $old_p);
   $self->{OBJECT}->_pluggable_event("$self->{OBJECT}->{_pluggable_prefix}plugin_del" => $old_a => $old_p);
 
   $@ = "Plugin named '$new_a' already exists ($self->{PLUGS}{$new_a}", return
     if $self->{PLUGS}{$new_a};
 
-  my $return;
-
-  my $register = "$self->{OBJECT}->{_pluggable_reg_prefix}register";
-  eval { $return = $new_p->$register($self->{OBJECT}) };
+  my $return = $self->_register($new_a, $new_p);
 
   if ($return) {
     $self->{PLUGS}{$new_p} = $new_a;
@@ -152,8 +141,7 @@ sub remove {
     ++$i;
   }
 
-  my $unregister = "$self->{OBJECT}->{_pluggable_reg_prefix}unregister";
-  eval { $old_p->$unregister($self->{OBJECT}) };
+  $self->_unregister($old_a, $old_p);
   $self->{OBJECT}->_pluggable_event("$self->{OBJECT}->{_pluggable_prefix}plugin_del" => $old_a => $old_p);
 
   return wantarray ? ($old_p, $old_a) : $old_p;
@@ -199,10 +187,7 @@ sub insert_before {
   $@ = "Plugin named '$new_a' already exists ($self->{PLUGS}{$new_a}", return
     if $self->{PLUGS}{$new_a};
 
-  my $return;
-
-  my $register = "$self->{OBJECT}->{_pluggable_reg_prefix}register";
-  eval { $return = $new_p->$register($self->{OBJECT}) };
+  my $return = $self->_register($new_a, $new_p);
 
   if ($return) {
     $self->{PLUGS}{$new_p} = $new_a;
@@ -233,10 +218,7 @@ sub insert_after {
   $@ = "Plugin named '$new_a' already exists ($self->{PLUGS}{$new_a}", return
     if $self->{PLUGS}{$new_a};
 
-  my $return;
-
-  my $register = "$self->{OBJECT}->{_pluggable_reg_prefix}register";
-  eval { $return = $new_p->$register($self->{OBJECT}) };
+  my $return = $self->_register($new_a, $new_p);
 
   if ($return) {
     $self->{PLUGS}{$new_p} = $new_a;
@@ -291,6 +273,28 @@ sub bump_down {
   splice(@$pipeline, $pos, 0, splice(@$pipeline, $idx, 1));
 
   return $pos;
+}
+
+sub _register {
+  my ($self, $alias, $plug) = @_;
+
+  my $return;
+  my $sub = "$self->{OBJECT}->{_pluggable_reg_prefix}register";
+  eval { $return = $plug->$sub($self->{OBJECT}) };
+  chomp $@;
+  warn "$sub call on plugin '$alias' failed: $@\n" if $@ and $self->{OBJECT}->{_pluggable_debug};
+  return $return;
+}
+
+sub _unregister {
+  my ($self, $alias, $plug) = @_;
+
+  my $return;
+  my $sub = "$self->{OBJECT}->{_pluggable_reg_prefix}unregister";
+  eval { $return = $plug->$sub($self->{OBJECT}) };
+  chomp $@;
+  warn "$sub call on plugin '$alias' failed: $@\n" if $@ and $self->{OBJECT}->{_pluggable_debug};
+  return $return;
 }
 
 1;

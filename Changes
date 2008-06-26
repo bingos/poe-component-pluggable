@@ -1,6 +1,9 @@
 POE::Component::Pluggable
 =========================
 
+1.10	
+	- Report errors if register/unregister calls fail (Hinrik)
+
 1.08	Sat Jun 14 08:41:53 BST 2008
 	- Lower-case the event name before processing it (Hinrik)
 
