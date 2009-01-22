@@ -1,6 +1,12 @@
 POE::Component::Pluggable
 =========================
 
+1.12	Thu Jan 22 10:29:10 GMT 2009
+	- Fixed circular reference problem with ::Pipeline
+	  reported with hints on how to fix by Jonathan Steinert
+	- Some Makefile.PL magic to make sure that we have 
+	  Scalar::Util::weaken
+
 1.10	Thu Jun 26 19:19:37 BST 2008
 	- Report errors if register/unregister calls fail (Hinrik)
 
