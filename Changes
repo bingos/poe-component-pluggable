@@ -1,6 +1,9 @@
 POE::Component::Pluggable
 =========================
 
+1.14	Mon Jan 26 12:25:26 GMT 2009
+	- We were not processing '_default' in $self. Fixed.
+
 1.12	Thu Jan 22 10:29:10 GMT 2009
 	- Fixed circular reference problem with ::Pipeline
 	  reported with hints on how to fix by Jonathan Steinert

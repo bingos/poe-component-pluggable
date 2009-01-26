@@ -7,7 +7,7 @@ use POE::Component::Pluggable::Pipeline;
 use POE::Component::Pluggable::Constants qw(:ALL);
 use vars qw($VERSION);
 
-$VERSION='1.12';
+$VERSION='1.14';
 
 sub _pluggable_init {
   my ($self, %opts) = @_;
@@ -53,6 +53,10 @@ sub _pluggable_process {
 
   if ( $self->can($sub) ) {
     eval { $self_ret = $self->$sub( $self, @args ) };
+    warn "$@" if $@;
+  }
+  elsif ( $self->can('_default') ) {
+    eval { $self_ret = $self->_default( $self, $sub, @args ) };
     warn "$@" if $@;
   }
 
