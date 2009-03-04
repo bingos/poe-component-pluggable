@@ -53,11 +53,11 @@ sub _pluggable_process {
 
   if ( $self->can($sub) ) {
     eval { $self_ret = $self->$sub( $self, @args ) };
-    warn "$@" if $@;
+    $self->_handle_error($sub, $self_ret);
   }
   elsif ( $self->can('_default') ) {
     eval { $self_ret = $self->_default( $self, $sub, @args ) };
-    warn "$@" if $@;
+    $self->_handle_error('_default', $self_ret);
   }
 
   return $return if $self_ret == PLUGIN_EAT_PLUGIN;
@@ -75,12 +75,10 @@ sub _pluggable_process {
     my $alias = ($pipeline->get($plugin))[1];
     if ( $plugin->can($sub) ) {
       eval { $ret = $plugin->$sub($self,@args) };
-      chomp $@;
-      warn "$sub call on plugin '$alias' failed: $@\n" if $@ and $self->{_pluggable_debug};
+      $self->_handle_error($sub, $ret, $alias);
     } elsif ( $plugin->can('_default') ) {
       eval { $ret = $plugin->_default($self,$sub,@args) };
-      chomp $@;
-      warn "_default call on plugin '$alias' failed: $@\n" if $@ and $self->{_pluggable_debug};
+      $self->_handle_error('_default', $ret, $alias);
     }
 
     return $return if $ret == PLUGIN_EAT_PLUGIN;
@@ -89,6 +87,22 @@ sub _pluggable_process {
   }
 
   return $return;
+}
+
+sub _handle_error {
+    my ($self, $sub, $return, $source) = @_;
+    $source = defined $source ? "plugin '$source'" : 'self';
+
+    if ($@) {
+      chomp $@;
+      warn "$sub call on $source failed: $@\n" if $self->{_pluggable_debug};
+    }
+    elsif ($return != PLUGIN_EAT_NONE
+        && $return != PLUGIN_EAT_PLUGIN
+        && $return != PLUGIN_EAT_CLIENT
+        && $return != PLUGIN_EAT_ALL) {
+      warn "$sub call on $source did not return a valid EAT constant\n";
+    }
 }
 
 # accesses the plugin pipeline

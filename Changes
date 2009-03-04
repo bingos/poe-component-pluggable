@@ -1,6 +1,11 @@
 POE::Component::Pluggable
 =========================
 
+1.16
+	- Remove extraneous newline from some debug messages (Hinrik)
+	- Give a helpful warning when a plugin handler does not return
+	  a valid EAT constant (Hinrik)
+
 1.14	Mon Jan 26 12:25:26 GMT 2009
 	- We were not processing '_default' in $self. Fixed.
 
