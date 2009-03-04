@@ -1,7 +1,7 @@
 POE::Component::Pluggable
 =========================
 
-1.16
+1.16	Wed Mar  4 23:07:47 GMT 2009
 	- Remove extraneous newline from some debug messages (Hinrik)
 	- Give a helpful warning when a plugin handler does not return
 	  a valid EAT constant (Hinrik)

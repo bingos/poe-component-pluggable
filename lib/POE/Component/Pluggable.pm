@@ -7,7 +7,7 @@ use POE::Component::Pluggable::Pipeline;
 use POE::Component::Pluggable::Constants qw(:ALL);
 use vars qw($VERSION);
 
-$VERSION='1.14';
+$VERSION='1.16';
 
 sub _pluggable_init {
   my ($self, %opts) = @_;
