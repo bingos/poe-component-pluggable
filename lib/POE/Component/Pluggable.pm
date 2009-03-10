@@ -242,7 +242,7 @@ __END__
 
 =head1 NAME
 
-POE::Component::Pluggable - A base class for creating plugin enabled POE Components.
+POE::Component::Pluggable - A base class for creating plugin-enabled POE Components.
 
 =head1 SYNOPSIS
 
