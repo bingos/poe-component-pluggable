@@ -1,21 +1,22 @@
 package POE::Component::Pluggable::Constants;
 
-require Exporter;
-@ISA = qw( Exporter );
-%EXPORT_TAGS = ( 'ALL' => [ qw( PLUGIN_EAT_NONE PLUGIN_EAT_CLIENT PLUGIN_EAT_PLUGIN PLUGIN_EAT_ALL ) ] );
-Exporter::export_ok_tags( 'ALL' );
-
 use strict;
 use warnings;
-use vars qw($VERSION);
+our $VERSION = '1.06';
 
-$VERSION = '1.06';
+require Exporter;
+use base qw(Exporter);
+our @EXPORT_OK = qw(
+    PLUGIN_EAT_NONE PLUGIN_EAT_CLIENT PLUGIN_EAT_PLUGIN PLUGIN_EAT_ALL
+);
+our %EXPORT_TAGS = ( ALL => [@EXPORT_OK] );
 
-# Our constants
-sub PLUGIN_EAT_NONE	() { 1 }
-sub PLUGIN_EAT_CLIENT	() { 2 }
-sub PLUGIN_EAT_PLUGIN	() { 3 }
-sub PLUGIN_EAT_ALL	() { 4 }
+use constant {
+    PLUGIN_EAT_NONE   => 1,
+    PLUGIN_EAT_CLIENT => 2,
+    PLUGIN_EAT_PLUGIN => 3,
+    PLUGIN_EAT_ALL    => 4,
+};
 
 1;
 __END__
@@ -36,28 +37,28 @@ required by the plugin system.
 
 =head1 EXPORTS
 
-=head2 PLUGIN_EAT_NONE
+=head2 C<PLUGIN_EAT_NONE>
 
 Value: 1
 
 This means the event will continue to be processed by remaining plugins and
 finally, sent to interested sessions that registered for it.
 
-=head2 PLUGIN_EAT_CLIENT
+=head2 C<PLUGIN_EAT_CLIENT>
 
 Value: 2
 
 This means the event will continue to be processed by remaining plugins but
 it will not be sent to any sessions that registered for it.
 
-=head2 PLUGIN_EAT_PLUGIN
+=head2 C<PLUGIN_EAT_PLUGIN>
 
 Value: 3
 
 This means the event will not be processed by remaining plugins, it will go
 straight to interested sessions.
 
-=head2 PLUGIN_EAT_ALL
+=head2 C<PLUGIN_EAT_ALL>
 
 Value: 4
 

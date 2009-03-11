@@ -5,88 +5,90 @@ use warnings;
 use Carp;
 use POE::Component::Pluggable::Pipeline;
 use POE::Component::Pluggable::Constants qw(:ALL);
-use vars qw($VERSION);
 
-$VERSION='1.16';
+our $VERSION='1.16';
 
 sub _pluggable_init {
-  my ($self, %opts) = @_;
+    my ($self, %opts) = @_;
   
-  $self->{'_pluggable_' . lc $_} = delete $opts{$_} for keys %opts;
-  $self->{_pluggable_reg_prefix} = 'plugin_' unless $self->{_pluggable_reg_prefix};
-  $self->{_pluggable_prefix} = 'pluggable_' unless $self->{_pluggable_prefix};
+    $self->{'_pluggable_' . lc $_} = delete $opts{$_} for keys %opts;
+    $self->{_pluggable_reg_prefix} = 'plugin_' if !$self->{_pluggable_reg_prefix};
+    $self->{_pluggable_prefix} = 'pluggable_' if !$self->{_pluggable_prefix};
   
-  if (ref $self->{_pluggable_types} eq 'ARRAY') {
-    $self->{_pluggable_types} = { map { ($_ => $_)  } @{ $self->{_pluggable_types} } };
-  }
-  elsif (ref $self->{_pluggable_types} ne 'HASH') {
-    $self->{_pluggable_types} = {};
-  }
+    if (ref $self->{_pluggable_types} eq 'ARRAY') {
+        $self->{_pluggable_types} = { map { $_ => $_ } @{ $self->{_pluggable_types} } };
+    }
+    elsif (ref $self->{_pluggable_types} ne 'HASH') {
+        $self->{_pluggable_types} = {};
+    }
   
-  return 1;
+    return 1;
 }
 
 sub _pluggable_destroy {
-  my $self = shift;
-  $self->plugin_del( $_ ) for keys %{ $self->plugin_list() };
+    my ($self) = @_;
+    $self->plugin_del( $_ ) for keys %{ $self->plugin_list() };
+    return;
 }
 
 sub _pluggable_event {
-  return;
+    return;
 }
 
 sub _pluggable_process {
-  my ($self, $type, $event, @args) = @_;
+    my ($self, $type, $event, @args) = @_;
 
-  if (!defined $type || !defined $event) {
-    carp 'Please supply an event type and name';
-    return;
-  }
-
-  $event = lc $event;
-  my $pipeline = $self->pipeline;
-  my $prefix = $self->{_pluggable_prefix};
-  $event =~ s/^\Q$prefix\E//;
-  my $sub = join '_', $self->{_pluggable_types}->{$type}, $event;
-  my $return = PLUGIN_EAT_NONE;
-  my $self_ret = $return;
-
-  if ( $self->can($sub) ) {
-    eval { $self_ret = $self->$sub( $self, @args ) };
-    $self->_handle_error($sub, $self_ret);
-  }
-  elsif ( $self->can('_default') ) {
-    eval { $self_ret = $self->_default( $self, $sub, @args ) };
-    $self->_handle_error('_default', $self_ret);
-  }
-
-  return $return if $self_ret == PLUGIN_EAT_PLUGIN;
-  $return = PLUGIN_EAT_ALL if $self_ret == PLUGIN_EAT_CLIENT;
-  return PLUGIN_EAT_ALL if $self_ret == PLUGIN_EAT_ALL;
-
-  for my $plugin (@{ $pipeline->{PIPELINE} }) {
-    next if $self eq $plugin;
-    next
-      unless $pipeline->{HANDLES}{$plugin}{$type}{$event}
-      or $pipeline->{HANDLES}{$plugin}{$type}{all};
-
-    my $ret = PLUGIN_EAT_NONE;
-
-    my $alias = ($pipeline->get($plugin))[1];
-    if ( $plugin->can($sub) ) {
-      eval { $ret = $plugin->$sub($self,@args) };
-      $self->_handle_error($sub, $ret, $alias);
-    } elsif ( $plugin->can('_default') ) {
-      eval { $ret = $plugin->_default($self,$sub,@args) };
-      $self->_handle_error('_default', $ret, $alias);
+    if (!defined $type || !defined $event) {
+        carp 'Please supply an event type and name';
+        return;
     }
 
-    return $return if $ret == PLUGIN_EAT_PLUGIN;
-    $return = PLUGIN_EAT_ALL if $ret == PLUGIN_EAT_CLIENT;
-    return PLUGIN_EAT_ALL if $ret == PLUGIN_EAT_ALL;
-  }
+    $event = lc $event;
+    my $pipeline = $self->pipeline;
+    my $prefix = $self->{_pluggable_prefix};
+    $event =~ s/^\Q$prefix\E//;
+    my $sub = join '_', $self->{_pluggable_types}{$type}, $event;
+    my $return = PLUGIN_EAT_NONE;
+    my $self_ret = $return;
 
-  return $return;
+    if ($self->can($sub)) {
+        eval { $self_ret = $self->$sub( $self, @args ) };
+        $self->_handle_error($sub, $self_ret);
+    }
+    elsif ( $self->can('_default') ) {
+        eval { $self_ret = $self->_default( $self, $sub, @args ) };
+        $self->_handle_error('_default', $self_ret);
+    }
+
+    return $return if $self_ret == PLUGIN_EAT_PLUGIN;
+    $return = PLUGIN_EAT_ALL if $self_ret == PLUGIN_EAT_CLIENT;
+    return PLUGIN_EAT_ALL if $self_ret == PLUGIN_EAT_ALL;
+
+    for my $plugin (@{ $pipeline->{PIPELINE} }) {
+        if ($self eq $plugin
+          || !$pipeline->{HANDLES}{$plugin}{$type}{$event}
+          && !$pipeline->{HANDLES}{$plugin}{$type}{all}) {
+            next;
+        }
+
+        my $ret = PLUGIN_EAT_NONE;
+
+        my $alias = ($pipeline->get($plugin))[1];
+        if ($plugin->can($sub)) {
+            eval { $ret = $plugin->$sub($self,@args) };
+            $self->_handle_error($sub, $ret, $alias);
+        }
+        elsif ( $plugin->can('_default') ) {
+            eval { $ret = $plugin->_default($self,$sub,@args) };
+            $self->_handle_error('_default', $ret, $alias);
+        }
+
+        return $return if $ret == PLUGIN_EAT_PLUGIN;
+        $return = PLUGIN_EAT_ALL if $ret == PLUGIN_EAT_CLIENT;
+        return PLUGIN_EAT_ALL if $ret == PLUGIN_EAT_ALL;
+    }
+
+    return $return;
 }
 
 sub _handle_error {
@@ -94,147 +96,149 @@ sub _handle_error {
     $source = defined $source ? "plugin '$source'" : 'self';
 
     if ($@) {
-      chomp $@;
-      warn "$sub call on $source failed: $@\n" if $self->{_pluggable_debug};
+        chomp $@;
+        warn "$sub call on $source failed: $@\n" if $self->{_pluggable_debug};
     }
     elsif ($return != PLUGIN_EAT_NONE
-        && $return != PLUGIN_EAT_PLUGIN
-        && $return != PLUGIN_EAT_CLIENT
-        && $return != PLUGIN_EAT_ALL) {
-      warn "$sub call on $source did not return a valid EAT constant\n";
+      && $return != PLUGIN_EAT_PLUGIN
+      && $return != PLUGIN_EAT_CLIENT
+      && $return != PLUGIN_EAT_ALL) {
+        warn "$sub call on $source did not return a valid EAT constant\n";
     }
+
+    return;
 }
 
 # accesses the plugin pipeline
 sub pipeline {
-  my ($self) = @_;
-  eval { $self->{_PLUGINS}->isa('POE::Component::Pluggble::Pipeline') };
-  $self->{_PLUGINS} = POE::Component::Pluggable::Pipeline->new($self) if $@;
-  return $self->{_PLUGINS};
+    my ($self) = @_;
+    eval { $self->{_PLUGINS}->isa('POE::Component::Pluggble::Pipeline') };
+    $self->{_PLUGINS} = POE::Component::Pluggable::Pipeline->new($self) if $@;
+    return $self->{_PLUGINS};
 }
 
 # Adds a new plugin object
 sub plugin_add {
-  my ($self, $name, $plugin) = @_;
+    my ($self, $name, $plugin) = @_;
 
-  unless (defined $name and defined $plugin) {
-    carp 'Please supply a name and the plugin object to be added!';
-    return;
-  }
+    if (!defined $name || !defined $plugin) {
+        carp 'Please supply a name and the plugin object to be added!';
+        return;
+    }
 
-  return $self->pipeline->push($name => $plugin);
+    return $self->pipeline->push($name, $plugin);
 }
 
 # Removes a plugin object
 sub plugin_del {
-  my ($self, $name) = @_;
+    my ($self, $name) = @_;
 
-  unless (defined $name) {
-    carp 'Please supply a name/object for the plugin to be removed!';
-    return;
-  }
+    if (!defined $name) {
+        carp 'Please supply a name/object for the plugin to be removed!';
+        return;
+    }
 
-  my $return = scalar $self->pipeline->remove($name);
-  warn "$@\n" if $@;
-  return $return;
+    my $return = scalar $self->pipeline->remove($name);
+    warn "$@\n" if $@;
+    return $return;
 }
 
 # Gets the plugin object
 sub plugin_get {
-  my ($self, $name) = @_;  
+    my ($self, $name) = @_;  
 
-  unless (defined $name) {
-    carp 'Please supply a name/object for the plugin to be removed!';
-    return;
-  }
+    if (!defined $name) {
+        carp 'Please supply a name/object for the plugin to be removed!';
+        return;
+    }
 
-  return scalar $self->pipeline->get($name);
+    return scalar $self->pipeline->get($name);
 }
 
 # Lists loaded plugins
 sub plugin_list {
-  my ($self) = @_;
-  my $pipeline = $self->pipeline;
+    my ($self) = @_;
+    my $pipeline = $self->pipeline;
   
-  my %return = map {$pipeline->{PLUGS}->{$_} => $_} @{ $pipeline->{PIPELINE} };
-  return \%return;
+    my %return = map {$pipeline->{PLUGS}{$_} => $_} @{ $pipeline->{PIPELINE} };
+    return \%return;
 }
 
 # Lists loaded plugins in order!
 sub plugin_order {
-  my ($self) = @_;
-  return $self->pipeline->{PIPELINE};
+    my ($self) = @_;
+    return $self->pipeline->{PIPELINE};
 }
 
 sub plugin_register {
-  my ($self, $plugin, $type, @events) = @_;
-  my $pipeline = $self->pipeline;
+    my ($self, $plugin, $type, @events) = @_;
+    my $pipeline = $self->pipeline;
 
-  unless ( grep { $_ eq $type } keys %{ $self->{_pluggable_types} } ) {
-    carp "The type '$type' is not supported!";
-    return;
-  }
-
-  unless (defined $plugin) {
-    carp 'Please supply the plugin object to register!';
-    return;
-  }
-
-  unless (@events) {
-    carp 'Please supply at least one event to register!';
-    return;
-  }
-
-  for my $ev (@events) {
-    if (ref($ev) and ref($ev) eq 'ARRAY') {
-      @{ $pipeline->{HANDLES}{$plugin}{$type} }{ map lc, @$ev } = (1) x @$ev;
+    if (!grep { $_ eq $type } keys %{ $self->{_pluggable_types} }) {
+        carp "The type '$type' is not supported!";
+        return;
     }
-    else {
-      $pipeline->{HANDLES}{$plugin}{$type}{lc $ev} = 1;
-    }
-  }
 
-  return 1;
+    if (!defined $plugin) {
+        carp 'Please supply the plugin object to register!';
+        return;
+    }
+
+    if (!@events) {
+        carp 'Please supply at least one event to register!';
+        return;
+    }
+
+    for my $ev (@events) {
+        if (ref $ev and ref $ev eq 'ARRAY') {
+            $pipeline->{HANDLES}{$plugin}{$type}{lc $_} = 1 for @$ev;
+        }
+        else {
+            $pipeline->{HANDLES}{$plugin}{$type}{lc $ev} = 1;
+        }
+    }
+
+    return 1;
 }
 
 sub plugin_unregister {
-  my ($self, $plugin, $type, @events) = @_;
-  my $pipeline = $self->pipeline;
+    my ($self, $plugin, $type, @events) = @_;
+    my $pipeline = $self->pipeline;
 
-  unless ( grep { $_ eq $type } keys %{ $self->{_pluggable_types} } ) {
-    carp "The type '$type' is not supported!";
-    return;
-  }
+    if (!grep { $_ eq $type } keys %{ $self->{_pluggable_types} }) {
+        carp "The type '$type' is not supported!";
+        return;
+    }
 
-  unless (defined $plugin) {
-    carp 'Please supply the plugin object to register!';
-    return;
-  }
+    if (!defined $plugin) {
+        carp 'Please supply the plugin object to register!';
+        return;
+    }
 
-  unless (@events) {
-    carp 'Please supply at least one event to unregister!';
-    return;
-  }
+    if (!@events) {
+        carp 'Please supply at least one event to unregister!';
+        return;
+    }
 
-  for my $ev (@events) {
-    if (ref($ev) and ref($ev) eq "ARRAY") {
-      for my $e (map lc, @$ev) {
-        unless (delete $pipeline->{HANDLES}{$plugin}{$type}{$e}) {
-          carp "The event '$e' does not exist!";
-          next;
+    for my $ev (@events) {
+        if (ref $ev and ref $ev eq "ARRAY") {
+            for my $e (map { lc } @$ev) {
+                if (!delete $pipeline->{HANDLES}{$plugin}{$type}{$e}) {
+                    carp "The event '$e' does not exist!";
+                    next;
+                }
+            }
         }
-      }
+        else {
+            $ev = lc $ev;
+            if (!delete $pipeline->{HANDLES}{$plugin}{$type}{$ev}) {
+                carp "The event '$ev' does not exist!";
+                next;
+            }
+        }
     }
-    else {
-      $ev = lc $ev;
-      unless (delete $pipeline->{HANDLES}{$plugin}{$type}{$ev}) {
-        carp "The event '$ev' does not exist!";
-        next;
-      }
-    }
-  }
 
-  return 1;
+    return 1;
 }
 
 1;
@@ -264,11 +268,11 @@ POE::Component::Pluggable - A base class for creating plugin-enabled POE Compone
          
          $self->_pluggable_init(prefix => 'simplepoco_');
          POE::Session->create(
-  	     object_states => [
-  	         $self => { shutdown => '_shutdown' },
-  		 $self => [qw(_send_ping _start register unregister __send_event)],
-  	     ],
-  	     heap => $self,
+             object_states => [
+                 $self => { shutdown => '_shutdown' },
+                 $self => [qw(_send_ping _start register unregister __send_event)],
+             ],
+             heap => $self,
          );
          
          return $self;
@@ -289,10 +293,10 @@ POE::Component::Pluggable - A base class for creating plugin-enabled POE Compone
          $self->{session_id} = $_[SESSION]->ID();
          
          if ($self->{alias}) {
-  	     $kernel->alias_set($self->{alias});
+             $kernel->alias_set($self->{alias});
          }
          else {
-  	     $kernel->refcount_increment($self->{session_id}, __PACKAGE__);
+             $kernel->refcount_increment($self->{session_id}, __PACKAGE__);
          }
       
          $kernel->delay(_send_ping => $self->{time} || 300);
@@ -364,8 +368,8 @@ POE::Component::Pluggable - A base class for creating plugin-enabled POE Compone
   
      POE::Session->create(
          package_states => [
-  	     main => [qw(_start simplepoco_registered simplepoco_ping)],
-  	 ],
+             main => [qw(_start simplepoco_registered simplepoco_ping)],
+         ],
      );
   
      $poe_kernel->run();

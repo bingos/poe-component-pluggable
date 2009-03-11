@@ -4,312 +4,354 @@ use strict;
 use warnings;
 use Carp;
 use Scalar::Util qw(weaken);
-use vars qw($VERSION);
 
-$VERSION = '1.12';
+our $VERSION = '1.12';
 
 sub new {
-  my ($package, $pluggable) = @_;
+    my ($package, $pluggable) = @_;
 
-  weaken( $pluggable );
+    weaken($pluggable);
 
-  return bless {
-    PLUGS => {},
-    PIPELINE => [],
-    HANDLES => {},
-    OBJECT => $pluggable,
-  }, $package;
+    return bless {
+        PLUGS    => {},
+        PIPELINE => [],
+        HANDLES  => {},
+        OBJECT   => $pluggable,
+    }, $package;
 }
 
 sub push {
-  my ($self, $alias, $plug) = @_;
-  $@ = "Plugin named '$alias' already exists ($self->{PLUGS}{$alias})", return
-    if $self->{PLUGS}{$alias};
+    my ($self, $alias, $plug) = @_;
 
-  my $return = $self->_register($alias, $plug);
+    if ($self->{PLUGS}{$alias}) {
+        $@ = "Plugin named '$alias' already exists ($self->{PLUGS}{$alias})";
+        return;
+    }
 
-  if ($return) {
+    my $return = $self->_register($alias, $plug);
+    return if !$return;
+
     push @{ $self->{PIPELINE} }, $plug;
     $self->{PLUGS}{$alias} = $plug;
     $self->{PLUGS}{$plug} = $alias;
-    $self->{OBJECT}->_pluggable_event("$self->{OBJECT}->{_pluggable_prefix}plugin_add" => $alias => $plug)
-	if defined $self->{OBJECT};
+    $self->{OBJECT}->_pluggable_event("$self->{OBJECT}{_pluggable_prefix}plugin_add", $alias, $plug)
+        if defined $self->{OBJECT};
+    
     return scalar @{ $self->{PIPELINE} };
-  }
-  else { return }
 }
 
 sub pop {
-  my ($self) = @_;
+    my ($self) = @_;
 
-  return unless @{ $self->{PIPELINE} };
+    return if !@{ $self->{PIPELINE} };
 
-  my $plug = pop @{ $self->{PIPELINE} };
-  my $alias = delete $self->{PLUGS}{$plug};
-  delete $self->{PLUGS}{$alias};
-  delete $self->{HANDLES}{$plug};
+    my $plug = pop @{ $self->{PIPELINE} };
+    my $alias = delete $self->{PLUGS}{$plug};
+    delete $self->{PLUGS}{$alias};
+    delete $self->{HANDLES}{$plug};
 
-  $self->_unregister($alias, $plug);
-  $self->{OBJECT}->_pluggable_event("$self->{OBJECT}->{_pluggable_prefix}plugin_del" => $alias => $plug)
-	if defined $self->{OBJECT};
+    $self->_unregister($alias, $plug);
+    $self->{OBJECT}->_pluggable_event("$self->{OBJECT}{_pluggable_prefix}plugin_del", $alias, $plug)
+        if defined $self->{OBJECT};
 
-  return wantarray ? ($plug, $alias) : $plug;
+    return wantarray ? ($plug, $alias) : $plug;
 }
 
 sub unshift {
-  my ($self, $alias, $plug) = @_;
-  $@ = "Plugin named '$alias' already exists ($self->{PLUGS}{$alias}", return
-    if $self->{PLUGS}{$alias};
+    my ($self, $alias, $plug) = @_;
 
-  my $return = $self->_register($alias, $plug);
+    if ($self->{PLUGS}{$alias}) {
+        $@ = "Plugin named '$alias' already exists ($self->{PLUGS}{$alias}";
+        return;
+    }
 
-  if ($return) {
+    my $return = $self->_register($alias, $plug);
+    return if !$return;
+
     unshift @{ $self->{PIPELINE} }, $plug;
     $self->{PLUGS}{$alias} = $plug;
     $self->{PLUGS}{$plug} = $alias;
-    $self->{OBJECT}->_pluggable_event("$self->{OBJECT}->{_pluggable_prefix}plugin_add" => $alias => $plug)
-	if defined $self->{OBJECT};
+    $self->{OBJECT}->_pluggable_event("$self->{OBJECT}{_pluggable_prefix}plugin_add", $alias, $plug)
+        if defined $self->{OBJECT};
 
     return scalar @{ $self->{PIPELINE} };
-  }
-  else { return }
-
-  return scalar @{ $self->{PIPELINE} };
 }
 
 sub shift {
-  my ($self) = @_;
+    my ($self) = @_;
 
-  return unless @{ $self->{PIPELINE} };
+    return if !@{ $self->{PIPELINE} };
 
-  my $plug = shift @{ $self->{PIPELINE} };
-  my $alias = delete $self->{PLUGS}{$plug};
-  delete $self->{PLUGS}{$alias};
-  delete $self->{HANDLES}{$plug};
+    my $plug = shift @{ $self->{PIPELINE} };
+    my $alias = delete $self->{PLUGS}{$plug};
+    delete $self->{PLUGS}{$alias};
+    delete $self->{HANDLES}{$plug};
 
-  $self->_unregister($alias, $plug);
-  $self->{OBJECT}->_pluggable_event("$self->{OBJECT}->{_pluggable_prefix}plugin_del" => $alias => $plug)
-	if defined $self->{OBJECT};
+    $self->_unregister($alias, $plug);
+    $self->{OBJECT}->_pluggable_event("$self->{OBJECT}{_pluggable_prefix}plugin_del", $alias, $plug)
+        if defined $self->{OBJECT};
 
-  return wantarray ? ($plug, $alias) : $plug;
+    return wantarray ? ($plug, $alias) : $plug;
 }
 
 sub replace {
-  my ($self, $old, $new_a, $new_p) = @_;
-  my ($old_a, $old_p) = ref $old ?
-    ($self->{PLUGS}{$old}, $old) :
-    ($old, $self->{PLUGS}{$old});
+    my ($self, $old, $new_a, $new_p) = @_;
+    
+    my ($old_a, $old_p) = ref $old
+        ? ($self->{PLUGS}{$old}, $old)
+        : ($old, $self->{PLUGS}{$old})
+    ;
 
-  $@ = "Plugin '$old_a' does not exist", return
-    unless $old_p;
+    if (!$old_p) {
+        $@ = "Plugin '$old_a' does not exist";
+        return;
+    }
 
-  delete $self->{PLUGS}{$old_p};
-  delete $self->{PLUGS}{$old_a};
-  delete $self->{HANDLES}{$old_p};
+    delete $self->{PLUGS}{$old_p};
+    delete $self->{PLUGS}{$old_a};
+    delete $self->{HANDLES}{$old_p};
   
-  $self->_unregister($old_a, $old_p);
-  $self->{OBJECT}->_pluggable_event("$self->{OBJECT}->{_pluggable_prefix}plugin_del" => $old_a => $old_p)
-	if defined $self->{OBJECT};
+    $self->_unregister($old_a, $old_p);
+    $self->{OBJECT}->_pluggable_event("$self->{OBJECT}{_pluggable_prefix}plugin_del", $old_a, $old_p)
+        if defined $self->{OBJECT};
 
-  $@ = "Plugin named '$new_a' already exists ($self->{PLUGS}{$new_a}", return
-    if $self->{PLUGS}{$new_a};
+    if ($self->{PLUGS}{$new_a}) {
+        $@ = "Plugin named '$new_a' already exists ($self->{PLUGS}{$new_a}";
+        return;
+    }
 
-  my $return = $self->_register($new_a, $new_p);
+    my $return = $self->_register($new_a, $new_p);
+    return if !$return;
 
-  if ($return) {
     $self->{PLUGS}{$new_p} = $new_a;
     $self->{PLUGS}{$new_a} = $new_p;
 
-    for (@{ $self->{PIPELINE} }) {
-      $_ = $new_p, last if $_ == $old_p;
+    for my $plugin (@{ $self->{PIPELINE} }) {
+        if ($plugin == $old_p) {
+            $plugin = $new_p;
+            last;
+        }
     }
 
-    $self->{OBJECT}->_pluggable_event("$self->{OBJECT}->{_pluggable_prefix}plugin_add" => $new_a => $new_p)
-	if defined $self->{OBJECT};
+    $self->{OBJECT}->_pluggable_event("$self->{OBJECT}{_pluggable_prefix}plugin_add", $new_a, $new_p)
+        if defined $self->{OBJECT};
     return 1;
-  }
-  else { return }
 }
 
 sub remove {
-  my ($self, $old) = @_;
-  my ($old_a, $old_p) = ref $old ?
-    ($self->{PLUGS}{$old}, $old) :
-    ($old, $self->{PLUGS}{$old});
+    my ($self, $old) = @_;
+    my ($old_a, $old_p) = ref $old
+        ? ($self->{PLUGS}{$old}, $old)
+        : ($old, $self->{PLUGS}{$old})
+    ;
 
-  $@ = "Plugin '$old_a' does not exist", return
-    unless $old_p;
+    if (!$old_p) {
+        $@ = "Plugin '$old_a' does not exist";
+        return;
+    }
 
-  delete $self->{PLUGS}{$old_p};
-  delete $self->{PLUGS}{$old_a};
-  delete $self->{HANDLES}{$old_p};
+    delete $self->{PLUGS}{$old_p};
+    delete $self->{PLUGS}{$old_a};
+    delete $self->{HANDLES}{$old_p};
 
-  my $i = 0;
-  for (@{ $self->{PIPELINE} }) {
-    splice(@{ $self->{PIPELINE} }, $i, 1), last
-      if $_ == $old_p;
-    ++$i;
-  }
+    my $i = 0;
+    for my $plugin (@{ $self->{PIPELINE} }) {
+        if ($plugin == $old_p) {
+            splice(@{ $self->{PIPELINE} }, $i, 1);
+            last;
+        }
+        $i++;
+    }
 
-  $self->_unregister($old_a, $old_p);
-  $self->{OBJECT}->_pluggable_event("$self->{OBJECT}->{_pluggable_prefix}plugin_del" => $old_a => $old_p)
-	if defined $self->{OBJECT};
+    $self->_unregister($old_a, $old_p);
+    $self->{OBJECT}->_pluggable_event("$self->{OBJECT}{_pluggable_prefix}plugin_del", $old_a, $old_p)
+        if defined $self->{OBJECT};
 
-  return wantarray ? ($old_p, $old_a) : $old_p;
+    return wantarray ? ($old_p, $old_a) : $old_p;
 }
 
 sub get {
-  my ($self, $old) = @_;
-  my ($old_a, $old_p) = ref $old ?
-    ($self->{PLUGS}{$old}, $old) :
-    ($old, $self->{PLUGS}{$old});
+    my ($self, $old) = @_;
+    
+    my ($old_a, $old_p) = ref $old
+        ? ($self->{PLUGS}{$old}, $old)
+        : ($old, $self->{PLUGS}{$old})
+    ;
 
-  $@ = "Plugin '$old_a' does not exist", return
-    unless $old_p;
 
-  return wantarray ? ($old_p, $old_a) : $old_p;
+    if (!$old_p) {
+        $@ = "Plugin '$old_a' does not exist";
+        return;
+    }
+
+    return wantarray ? ($old_p, $old_a) : $old_p;
 }
 
 sub get_index {
-  my ($self, $old) = @_;
-  my ($old_a, $old_p) = ref $old ?
-    ($self->{PLUGS}{$old}, $old) :
-    ($old, $self->{PLUGS}{$old});
+    my ($self, $old) = @_;
+    
+    my ($old_a, $old_p) = ref $old
+        ? ($self->{PLUGS}{$old}, $old)
+        : ($old, $self->{PLUGS}{$old})
+    ;
 
-  $@ = "Plugin '$old_a' does not exist", return -1
-    unless $old_p;
+    if (!$old_p) {
+        $@ = "Plugin '$old_a' does not exist";
+        return -1;
+    }
 
-  my $i = 0;
-  for (@{ $self->{PIPELINE} }) {
-    return $i if $_ == $old_p;
-    ++$i;
-  }
+    my $i = 0;
+    for my $plugin (@{ $self->{PIPELINE} }) {
+        return $i if $plugin == $old_p;
+        $i++;
+    }
+
+    return -1;
 }
 
 sub insert_before {
-  my ($self, $old, $new_a, $new_p) = @_;
-  my ($old_a, $old_p) = ref $old ?
-    ($self->{PLUGS}{$old}, $old) :
-    ($old, $self->{PLUGS}{$old});
+    my ($self, $old, $new_a, $new_p) = @_;
+    
+    my ($old_a, $old_p) = ref $old
+        ? ($self->{PLUGS}{$old}, $old)
+        : ($old, $self->{PLUGS}{$old})
+    ;
 
-  $@ = "Plugin '$old_a' does not exist", return
-    unless $old_p;
+    if (!$old_p) {
+        $@ = "Plugin '$old_a' does not exist";
+        return;
+    }
 
-  $@ = "Plugin named '$new_a' already exists ($self->{PLUGS}{$new_a}", return
-    if $self->{PLUGS}{$new_a};
+    if ($self->{PLUGS}{$new_a}) {
+        $@ = "Plugin named '$new_a' already exists ($self->{PLUGS}{$new_a}";
+        return;
+    }
 
-  my $return = $self->_register($new_a, $new_p);
+    my $return = $self->_register($new_a, $new_p);
+    return if !$return;
 
-  if ($return) {
     $self->{PLUGS}{$new_p} = $new_a;
     $self->{PLUGS}{$new_a} = $new_p;
 
     my $i = 0;
-    for (@{ $self->{PIPELINE} }) {
-      splice(@{ $self->{PIPELINE} }, $i, 0, $new_p), last
-        if $_ == $old_p;
-      ++$i;
+    for my $plugin (@{ $self->{PIPELINE} }) {
+        if ($plugin == $old_p) {
+            splice(@{ $self->{PIPELINE} }, $i, 0, $new_p);
+            last;
+        }
+        $i++;
     }
 
-    $self->{OBJECT}->_pluggable_event("$self->{OBJECT}->{_pluggable_prefix}plugin_add" => $new_a => $new_p)
-	if defined $self->{OBJECT};
+    $self->{OBJECT}->_pluggable_event("$self->{OBJECT}{_pluggable_prefix}plugin_add", $new_a, $new_p)
+        if defined $self->{OBJECT};
     return 1;
-  }
-  else { return }
 }
 
 sub insert_after {
-  my ($self, $old, $new_a, $new_p) = @_;
-  my ($old_a, $old_p) = ref $old ?
-    ($self->{PLUGS}{$old}, $old) :
-    ($old, $self->{PLUGS}{$old});
+    my ($self, $old, $new_a, $new_p) = @_;
+    my ($old_a, $old_p) = ref $old
+        ? ($self->{PLUGS}{$old}, $old)
+        : ($old, $self->{PLUGS}{$old})
+    ;
 
-  $@ = "Plugin '$old_a' does not exist", return
-    unless $old_p;
+    if (!$old_p) {
+        $@ = "Plugin '$old_a' does not exist";
+        return;
+    }
 
-  $@ = "Plugin named '$new_a' already exists ($self->{PLUGS}{$new_a}", return
-    if $self->{PLUGS}{$new_a};
+    if ($self->{PLUGS}{$new_a}) {
+        $@ = "Plugin named '$new_a' already exists ($self->{PLUGS}{$new_a}";
+        return;
+    }
 
-  my $return = $self->_register($new_a, $new_p);
+    my $return = $self->_register($new_a, $new_p);
+    return if !$return;
 
-  if ($return) {
     $self->{PLUGS}{$new_p} = $new_a;
     $self->{PLUGS}{$new_a} = $new_p;
 
     my $i = 0;
-    for (@{ $self->{PIPELINE} }) {
-      splice(@{ $self->{PIPELINE} }, $i+1, 0, $new_p), last
-        if $_ == $old_p;
-      ++$i;
+    for my $plugin (@{ $self->{PIPELINE} }) {
+        if ($plugin == $old_p) {
+            splice(@{ $self->{PIPELINE} }, $i+1, 0, $new_p);
+            last;
+        }
+        $i++;
     }
 
-    $self->{OBJECT}->_pluggable_event("$self->{OBJECT}->{_pluggable_prefix}plugin_add" => $new_a => $new_p)
-	if defined $self->{OBJECT};
+    $self->{OBJECT}->_pluggable_event("$self->{OBJECT}{_pluggable_prefix}plugin_add", $new_a, $new_p)
+        if defined $self->{OBJECT};
     return 1;
-  }
-  else { return }
 }
 
 sub bump_up {
-  my ($self, $old, $diff) = @_;
-  my $idx = $self->get_index($old);
+    my ($self, $old, $diff) = @_;
+    my $idx = $self->get_index($old);
 
-  return -1 if $idx < 0;
+    return -1 if $idx < 0;
 
-  my $pipeline = $self->{PIPELINE};
-  $diff ||= 1;
+    my $pipeline = $self->{PIPELINE};
+    $diff ||= 1;
 
-  my $pos = $idx - $diff;
+    my $pos = $idx - $diff;
 
-  carp "$idx - $diff is negative, moving to head of the pipeline"
-    if $pos < 0;
+    if ($pos < 0) {
+        carp "$idx - $diff is negative, moving to head of the pipeline";
+    }
 
-  splice(@$pipeline, $pos, 0, splice(@$pipeline, $idx, 1));
-
-  return $pos;
+    splice(@$pipeline, $pos, 0, splice(@$pipeline, $idx, 1));
+    return $pos;
 }
 
 sub bump_down {
-  my ($self, $old, $diff) = @_;
-  my $idx = $self->get_index($old);
+    my ($self, $old, $diff) = @_;
+    my $idx = $self->get_index($old);
 
-  return -1 if $idx < 0;
+    return -1 if $idx < 0;
 
-  my $pipeline = $self->{PIPELINE};
-  $diff ||= 1;
+    my $pipeline = $self->{PIPELINE};
+    $diff ||= 1;
 
-  my $pos = $idx + $diff;
+    my $pos = $idx + $diff;
 
-  carp "$idx + $diff is too high, moving to back of the pipeline"
-    if $pos >= @$pipeline;
+    if ($pos >= @$pipeline) {
+        carp "$idx + $diff is too high, moving to back of the pipeline";
+    }
 
-  splice(@$pipeline, $pos, 0, splice(@$pipeline, $idx, 1));
-
-  return $pos;
+    splice(@$pipeline, $pos, 0, splice(@$pipeline, $idx, 1));
+    return $pos;
 }
 
 sub _register {
-  my ($self, $alias, $plug) = @_;
-  return unless defined $self->{OBJECT};
+    my ($self, $alias, $plug) = @_;
+    return if !defined $self->{OBJECT};
 
-  my $return;
-  my $sub = "$self->{OBJECT}->{_pluggable_reg_prefix}register";
-  eval { $return = $plug->$sub($self->{OBJECT}) };
-  chomp $@;
-  warn "$sub call on plugin '$alias' failed: $@\n" if $@ and $self->{OBJECT}->{_pluggable_debug};
-  return $return;
+    my $return;
+    my $sub = "$self->{OBJECT}{_pluggable_reg_prefix}register";
+    eval { $return = $plug->$sub($self->{OBJECT}) };
+
+    if ($@ && $self->{OBJECT}{_pluggable_debug}) {
+        chomp $@;
+        warn "$sub call on plugin '$alias' failed: $@\n";
+    }
+    
+    return $return;
 }
 
 sub _unregister {
-  my ($self, $alias, $plug) = @_;
-  return unless defined $self->{OBJECT};
+    my ($self, $alias, $plug) = @_;
+    return if !defined $self->{OBJECT};
 
-  my $return;
-  my $sub = "$self->{OBJECT}->{_pluggable_reg_prefix}unregister";
-  eval { $return = $plug->$sub($self->{OBJECT}) };
-  chomp $@;
-  warn "$sub call on plugin '$alias' failed: $@\n" if $@ and $self->{OBJECT}->{_pluggable_debug};
-  return $return;
+    my $return;
+    my $sub = "$self->{OBJECT}{_pluggable_reg_prefix}unregister";
+    eval { $return = $plug->$sub($self->{OBJECT}) };
+
+    if ($@ && $self->{OBJECT}{_pluggable_debug}) {
+        chomp $@;
+        warn "$sub call on plugin '$alias' failed: $@\n";
+    }
+
+    return $return;
 }
 
 1;
@@ -392,9 +434,9 @@ Takes one argument, the POE::Component::Pluggable object to attach to.
 =head2 C<push>
 
 Takes two arguments, an alias for a plugin and the plugin object itself.
-If a plugin with that alias already exists, $@ will be set and C<undef> will
-be returned. Otherwise, it adds the plugin to the end of the pipeline and
-registers it. This will yield an 'plugin_add' event. If successful, it
+If a plugin with that alias already exists, C<$@> will be set and C<undef>
+will be returned. Otherwise, it adds the plugin to the end of the pipeline
+and registers it. This will yield a C<plugin_add> event. If successful, it
 returns the size of the pipeline.
 
  my $new_size = $pipe->push($name, $plug);
@@ -402,17 +444,17 @@ returns the size of the pipeline.
 =head2 C<unshift>
 
 Takes two arguments, an alias for a plugin and the plugin object itself.
-If a plugin with that alias already exists, $@ will be set and C<undef> will
-be returned. Otherwise, it adds the plugin to the beginning of the pipeline
-and registers it. This will yield an 'plugin_add' event. If successful,
-it returns the size of the pipeline.
+If a plugin with that alias already exists, C<$@> will be set and C<undef>
+will be returned. Otherwise, it adds the plugin to the beginning of the
+pipeline and registers it. This will yield a C<plugin_add> event. If
+successful, it returns the size of the pipeline.
 
  my $new_size = $pipe->push($name, $plug);
 
 =head2 C<shift>
 
 Takes no arguments. The first plugin in the pipeline is removed. This will
-yield a 'plugin_del' event. In list context, it returns the plugin and its
+yield a C<plugin_del> event. In list context, it returns the plugin and its
 alias; in scalar context, it returns only the plugin. If there were no
 elements, an empty list or C<undef> will be returned.
 
@@ -422,7 +464,7 @@ elements, an empty list or C<undef> will be returned.
 =head2 C<pop>
 
 Takes no arguments. The last plugin in the pipeline is removed. This will
-yield an 'plugin_del' event. In list context, it returns the plugin and its
+yield an C<plugin_del> event. In list context, it returns the plugin and its
 alias; in scalar context, it returns only the plugin. If there were no
 elements, an empty list or C<undef> will be returned.
 
@@ -435,8 +477,8 @@ Take three arguments, the old plugin or its alias, an alias for the new
 plugin and the new plugin object itself. If the old plugin doesn't exist,
 or if there is already a plugin with the new alias (besides the old plugin),
 $@ will be set and C<undef> will be returned. Otherwise, it removes the old
-plugin (yielding an 'plugin_del' event) and replaces it with the new
-plugin. This will yield an 'plugin_add' event. If successful, it returns 1.
+plugin (yielding an C<plugin_del> event) and replaces it with the new
+plugin. This will yield an C<plugin_add> event. If successful, it returns 1.
 
  my $success = $pipe->replace($name, $new_name, $new_plug);
  my $success = $pipe->replace($plug, $new_name, $new_plug);
@@ -446,7 +488,7 @@ plugin. This will yield an 'plugin_add' event. If successful, it returns 1.
 Takes three arguments, the plugin that is relative to the operation,
 an alias for the new plugin and the new plugin object itself. If the first
 plugin doesn't exist, or if there is already a plugin with the new alias,
-$@ will be set and C<undef> will be returned. Otherwise, the new plugin is
+C<$@> will be set and C<undef> will be returned. Otherwise, the new plugin is
 placed just prior to the other plugin in the pipeline. If successful,
 it returns 1.
 
@@ -458,8 +500,8 @@ it returns 1.
 Takes three arguments, the plugin that is relative to the operation,
 an alias for the new plugin and the new plugin object itself. If the
 first plugin doesn't exist, or if there is already a plugin with the
-new alias, $@ will be set and C<undef> will be returned. Otherwise, the
-new plugin is placed just after to the other plugin in the pipeline.
+new alias, C<$@> will be set and C<undef> will be returned. Otherwise,
+the new plugin is placed just after to the other plugin in the pipeline.
 If successful, it returns 1.
 
  my $success = $pipe->insert_after($name, $new_name, $new_plug);
@@ -469,7 +511,7 @@ If successful, it returns 1.
 
 Takes one or two arguments, the plugin or its alias, and the distance to
 bump the plugin. The distance defaults to 1. If the plugin doesn't exist,
-$@ will be set and B<-1 will be returned, not undef>. Otherwise, the
+C<$@> will be set and B<-1 will be returned, not undef>. Otherwise, the
 plugin will be moved the given distance closer to the front of the
 pipeline. A warning is issued alerting you if it would have been moved
 past the beginning of the pipeline, and the plugin is placed at the
@@ -485,8 +527,8 @@ returned.
 
 Takes one or two arguments, the plugin or its alias, and the distance to
 bump the plugin. The distance defaults to 1. If the plugin doesn't exist,
-$@ will be set and B<-1 will be returned, not C<undef>>. Otherwise, the plugin
-will be moved the given distance closer to the end of the pipeline.
+C<$@> will be set and B<-1 will be returned, not C<undef>>. Otherwise, the
+plugin will be moved the given distance closer to the end of the pipeline.
 A warning is issued alerting you if it would have been moved past the end
 of the pipeline, and the plugin is placed at the end. If successful, the new
 index of the plugin in the pipeline is returned.
@@ -499,10 +541,10 @@ index of the plugin in the pipeline is returned.
 =head2 C<remove>
 
 Takes one argument, a plugin or its alias. If the plugin doesn't exist,
-$@ will be set and C<undef> will be returned. Otherwise, the plugin is removed
-from the pipeline. This will yield an 'plugin_del' event. In list context,
-it returns the plugin and its alias; in scalar context, it returns only the
-plugin.
+C<$@> will be set and C<undef> will be returned. Otherwise, the plugin is
+removed from the pipeline. This will yield an C<plugin_del> event. In list
+context,it returns the plugin and its alias; in scalar context, it returns
+only the plugin.
 
  my ($plug, $name) = $pipe->remove($the_name);
  my ($plug, $name) = $pipe->remove($the_plug);
@@ -511,9 +553,9 @@ plugin.
 
 =head2 C<get>
 
-Takes one argument, a plugin or its alias. If no such plugin exists, $@ will
-be set and C<undef> will be returned. In list context, it returns the plugin and
-its alias; in scalar context, it returns only the plugin.
+Takes one argument, a plugin or its alias. If no such plugin exists, C<$@>
+will be set and C<undef> will be returned. In list context, it returns the
+plugin and its alias; in scalar context, it returns only the plugin.
 
  my ($plug, $name) = $pipe->get($the_name);
  my ($plug, $name) = $pipe->get($the_plug);
@@ -522,9 +564,9 @@ its alias; in scalar context, it returns only the plugin.
 
 =head2 C<get_index>
 
-Takes one argument, a plugin or its alias. If no such plugin exists, $@ will
-be set and B<-1 will be returned, not C<undef>>. Otherwise, the index in the
-pipeline is returned.
+Takes one argument, a plugin or its alias. If no such plugin exists, C<$@>
+will be set and B<-1 will be returned, not C<undef>>. Otherwise, the index
+in the pipeline is returned.
 
  my $pos = $pipe->get_index($name);
  my $pos = $pipe->get_index($plug);
