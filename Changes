@@ -4,6 +4,8 @@ POE::Component::Pluggable
 1.18
     - Tidied up all the code. Removed hard tabs and made code more readable
       some places. (Hinrik)
+    - Complain when plugin register/unregister subroutines don't return a
+      true value (Hinrik)
 
 1.16  Wed Mar  4 23:07:47 GMT 2009
     - Remove extraneous newline from some debug messages (Hinrik)

@@ -32,11 +32,6 @@ sub push {
     return if !$return;
 
     push @{ $self->{PIPELINE} }, $plug;
-    $self->{PLUGS}{$alias} = $plug;
-    $self->{PLUGS}{$plug} = $alias;
-    $self->{OBJECT}->_pluggable_event("$self->{OBJECT}{_pluggable_prefix}plugin_add", $alias, $plug)
-        if defined $self->{OBJECT};
-    
     return scalar @{ $self->{PIPELINE} };
 }
 
@@ -46,13 +41,8 @@ sub pop {
     return if !@{ $self->{PIPELINE} };
 
     my $plug = pop @{ $self->{PIPELINE} };
-    my $alias = delete $self->{PLUGS}{$plug};
-    delete $self->{PLUGS}{$alias};
-    delete $self->{HANDLES}{$plug};
-
+    my $alias = $self->{PLUGS}{$plug};
     $self->_unregister($alias, $plug);
-    $self->{OBJECT}->_pluggable_event("$self->{OBJECT}{_pluggable_prefix}plugin_del", $alias, $plug)
-        if defined $self->{OBJECT};
 
     return wantarray ? ($plug, $alias) : $plug;
 }
@@ -69,11 +59,6 @@ sub unshift {
     return if !$return;
 
     unshift @{ $self->{PIPELINE} }, $plug;
-    $self->{PLUGS}{$alias} = $plug;
-    $self->{PLUGS}{$plug} = $alias;
-    $self->{OBJECT}->_pluggable_event("$self->{OBJECT}{_pluggable_prefix}plugin_add", $alias, $plug)
-        if defined $self->{OBJECT};
-
     return scalar @{ $self->{PIPELINE} };
 }
 
@@ -83,13 +68,8 @@ sub shift {
     return if !@{ $self->{PIPELINE} };
 
     my $plug = shift @{ $self->{PIPELINE} };
-    my $alias = delete $self->{PLUGS}{$plug};
-    delete $self->{PLUGS}{$alias};
-    delete $self->{HANDLES}{$plug};
-
+    my $alias = $self->{PLUGS}{$plug};
     $self->_unregister($alias, $plug);
-    $self->{OBJECT}->_pluggable_event("$self->{OBJECT}{_pluggable_prefix}plugin_del", $alias, $plug)
-        if defined $self->{OBJECT};
 
     return wantarray ? ($plug, $alias) : $plug;
 }
@@ -107,13 +87,7 @@ sub replace {
         return;
     }
 
-    delete $self->{PLUGS}{$old_p};
-    delete $self->{PLUGS}{$old_a};
-    delete $self->{HANDLES}{$old_p};
-  
     $self->_unregister($old_a, $old_p);
-    $self->{OBJECT}->_pluggable_event("$self->{OBJECT}{_pluggable_prefix}plugin_del", $old_a, $old_p)
-        if defined $self->{OBJECT};
 
     if ($self->{PLUGS}{$new_a}) {
         $@ = "Plugin named '$new_a' already exists ($self->{PLUGS}{$new_a}";
@@ -123,9 +97,6 @@ sub replace {
     my $return = $self->_register($new_a, $new_p);
     return if !$return;
 
-    $self->{PLUGS}{$new_p} = $new_a;
-    $self->{PLUGS}{$new_a} = $new_p;
-
     for my $plugin (@{ $self->{PIPELINE} }) {
         if ($plugin == $old_p) {
             $plugin = $new_p;
@@ -133,8 +104,6 @@ sub replace {
         }
     }
 
-    $self->{OBJECT}->_pluggable_event("$self->{OBJECT}{_pluggable_prefix}plugin_add", $new_a, $new_p)
-        if defined $self->{OBJECT};
     return 1;
 }
 
@@ -150,10 +119,6 @@ sub remove {
         return;
     }
 
-    delete $self->{PLUGS}{$old_p};
-    delete $self->{PLUGS}{$old_a};
-    delete $self->{HANDLES}{$old_p};
-
     my $i = 0;
     for my $plugin (@{ $self->{PIPELINE} }) {
         if ($plugin == $old_p) {
@@ -164,8 +129,6 @@ sub remove {
     }
 
     $self->_unregister($old_a, $old_p);
-    $self->{OBJECT}->_pluggable_event("$self->{OBJECT}{_pluggable_prefix}plugin_del", $old_a, $old_p)
-        if defined $self->{OBJECT};
 
     return wantarray ? ($old_p, $old_a) : $old_p;
 }
@@ -230,9 +193,6 @@ sub insert_before {
     my $return = $self->_register($new_a, $new_p);
     return if !$return;
 
-    $self->{PLUGS}{$new_p} = $new_a;
-    $self->{PLUGS}{$new_a} = $new_p;
-
     my $i = 0;
     for my $plugin (@{ $self->{PIPELINE} }) {
         if ($plugin == $old_p) {
@@ -242,8 +202,6 @@ sub insert_before {
         $i++;
     }
 
-    $self->{OBJECT}->_pluggable_event("$self->{OBJECT}{_pluggable_prefix}plugin_add", $new_a, $new_p)
-        if defined $self->{OBJECT};
     return 1;
 }
 
@@ -267,9 +225,6 @@ sub insert_after {
     my $return = $self->_register($new_a, $new_p);
     return if !$return;
 
-    $self->{PLUGS}{$new_p} = $new_a;
-    $self->{PLUGS}{$new_a} = $new_p;
-
     my $i = 0;
     for my $plugin (@{ $self->{PIPELINE} }) {
         if ($plugin == $old_p) {
@@ -279,8 +234,6 @@ sub insert_after {
         $i++;
     }
 
-    $self->{OBJECT}->_pluggable_event("$self->{OBJECT}{_pluggable_prefix}plugin_add", $new_a, $new_p)
-        if defined $self->{OBJECT};
     return 1;
 }
 
@@ -334,7 +287,18 @@ sub _register {
         chomp $@;
         warn "$sub call on plugin '$alias' failed: $@\n";
     }
+    elsif (!$return && $self->{OBJECT}{_pluggable_debug}) {
+        warn "$sub call on plugin '$alias' did not return a true value\n";
+    }
+
+    $self->{PLUGS}{$plug} = $alias;
+    $self->{PLUGS}{$alias} = $plug;
     
+    $self->{OBJECT}->_pluggable_event(
+        "$self->{OBJECT}{_pluggable_prefix}plugin_add",
+        $alias, $plug,
+    );
+
     return $return;
 }
 
@@ -350,6 +314,18 @@ sub _unregister {
         chomp $@;
         warn "$sub call on plugin '$alias' failed: $@\n";
     }
+    elsif (!$return && $self->{OBJECT}{_pluggable_debug}) {
+        warn "$sub call on plugin '$alias' did not return a true value\n";
+    }
+
+    delete $self->{PLUGS}{$plug};
+    delete $self->{PLUGS}{$alias};
+    delete $self->{HANDLES}{$plug};
+
+    $self->{OBJECT}->_pluggable_event(
+        "$self->{OBJECT}{_pluggable_prefix}plugin_del",
+        $alias, $plug,
+    );
 
     return $return;
 }
