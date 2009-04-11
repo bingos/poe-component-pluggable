@@ -1,4 +1,5 @@
 Makefile
+Makefile.old
 POE-Component-Pluggable-*
 blib
 inc
