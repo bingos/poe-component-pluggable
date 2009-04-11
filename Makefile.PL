@@ -31,5 +31,6 @@ NOTICE
    }
    requires 'Scalar::Util' => 1.19;
 }
-requires 'POE' => 1.0002;
+requires 'POE' => 1.004;
+eval "auto_set_repository";
 WriteAll();
