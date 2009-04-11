@@ -1,7 +1,7 @@
 POE::Component::Pluggable
 =========================
 
-1.18
+1.18  Sat Apr 11 10:05:02 BST 2009
     - Tidied up all the code. Removed hard tabs and made code more readable
       some places. (Hinrik)
     - Complain when plugin register/unregister subroutines don't return a
