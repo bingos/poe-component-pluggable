@@ -631,7 +631,7 @@ Chris 'BinGOs' Williams <chris@bingosnet.co.uk>
 
 =head1 LICENSE
 
-Copyright C<(c)> Chris Williams, Apocalypse, Hinrik Örn Sigurðsson and Jeff Pinyan
+Copyright C<(c)> Chris Williams, Apocalypse, Hinrik Ã–rn SigurÃ°sson and Jeff Pinyan
 
 This module may be used, modified, and distributed under the same terms as
 Perl itself. Please see the license that came with your Perl distribution for
