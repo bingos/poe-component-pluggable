@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests => 7;
+use Test::More tests => 9;
 
 {
   package TestSubClass;
@@ -16,7 +16,7 @@ use Test::More tests => 7;
     $self->_pluggable_init( prefix => 'testsub_', types => [ 'SERVER' ] );
     $self->{session_id} = POE::Session->create(
 	object_states => [
-		$self => [ qw(_start __send_event test shutdown) ],
+		$self => [ qw(_start __send_event test noret shutdown) ],
 	],
 	heap => $self,
 	options => { trace => 0 },
@@ -65,6 +65,12 @@ use Test::More tests => 7;
     $self->_send_event( $self->{_pluggable_prefix} . 'test', @args );
     return;
   }
+
+  sub noret {
+    my ($kernel,$self,@args) = @_[KERNEL,OBJECT,ARG0..$#_];
+    $self->_send_event( $self->{_pluggable_prefix} . 'noret', @args );
+    return;
+  }
 }
 
 {
@@ -96,6 +102,12 @@ use Test::More tests => 7;
     pass(__PACKAGE__ . ' test event' );
     return PLUGIN_EAT_NONE;
   }
+
+  sub SERVER_noret {
+    my ($self,$irc) = splice @_, 0, 2;
+    pass(__PACKAGE__ . ' noret event' );
+    return;
+  }
 }
 
 use strict;
@@ -104,7 +116,7 @@ use POE;
 
 POE::Session->create(
 	package_states => [
-		'main' => [qw(_start testsub_test testsub_plugin_add testsub_plugin_del)],
+		'main' => [qw(_start testsub_test testsub_noret testsub_plugin_add testsub_plugin_del)],
 	],
 	options => { trace => 0 },
 );
@@ -136,6 +148,12 @@ sub testsub_plugin_del {
 sub testsub_test {
   my ($kernel,$sender,$answer) = @_[KERNEL,SENDER,ARG0];
   ok( $answer eq 'fubar', "event was cool" );
-  $kernel->post( $sender, 'shutdown' );
+  $kernel->post( $sender, 'noret' );
   return;
+}
+
+sub testsub_noret {
+  my ($kernel,$sender,$answer) = @_[KERNEL,SENDER,ARG0];
+  pass("testsub_noret");
+  $kernel->post( $sender, 'shutdown' );
 }

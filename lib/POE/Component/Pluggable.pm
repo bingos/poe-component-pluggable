@@ -6,7 +6,7 @@ use Carp;
 use POE::Component::Pluggable::Pipeline;
 use POE::Component::Pluggable::Constants qw(:ALL);
 
-our $VERSION='1.18';
+our $VERSION='1.20';
 
 sub _pluggable_init {
     my ($self, %opts) = @_;
@@ -83,6 +83,7 @@ sub _pluggable_process {
             $self->_handle_error('_default', $ret, $alias);
         }
 
+	$ret = PLUGIN_EAT_NONE unless defined $ret;
         return $return if $ret == PLUGIN_EAT_PLUGIN;
         $return = PLUGIN_EAT_ALL if $ret == PLUGIN_EAT_CLIENT;
         return PLUGIN_EAT_ALL if $ret == PLUGIN_EAT_ALL;
@@ -99,10 +100,11 @@ sub _handle_error {
         chomp $@;
         warn "$sub call on $source failed: $@\n" if $self->{_pluggable_debug};
     }
-    elsif ($return != PLUGIN_EAT_NONE
+    elsif ( !defined $return || 
+      ($return != PLUGIN_EAT_NONE
       && $return != PLUGIN_EAT_PLUGIN
       && $return != PLUGIN_EAT_CLIENT
-      && $return != PLUGIN_EAT_ALL) {
+      && $return != PLUGIN_EAT_ALL) ) {
         warn "$sub call on $source did not return a valid EAT constant\n";
     }
 

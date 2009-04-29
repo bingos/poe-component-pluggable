@@ -1,6 +1,11 @@
 POE::Component::Pluggable
 =========================
 
+1.20  Wed Apr 29 09:27:08 BST 2009
+    - Removed the crufty checks in Makefile.PL for 'weaken' support and
+      required Task::Weaken instead.
+    - Fixed some warnings when plugin return undef.
+
 1.18  Sat Apr 11 10:05:02 BST 2009
     - Tidied up all the code. Removed hard tabs and made code more readable
       some places. (Hinrik)
