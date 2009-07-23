@@ -1,3 +1,1 @@
-^inc/Module/Install/Repository.pm
-^MANIFEST.SKIP
-^.git
+^(?!bin/|examples/|lib/|inc/|t/|xt/|Makefile.PL$|LICENSE$|README$|MANIFEST$|Changes$|META.yml$)

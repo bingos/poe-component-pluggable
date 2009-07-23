@@ -6,7 +6,7 @@ use Carp;
 use POE::Component::Pluggable::Pipeline;
 use POE::Component::Pluggable::Constants qw(:ALL);
 
-our $VERSION='1.20';
+our $VERSION='1.22';
 
 sub _pluggable_init {
     my ($self, %opts) = @_;
