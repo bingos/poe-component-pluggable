@@ -5,19 +5,21 @@ use warnings;
 use Carp;
 use Scalar::Util qw(weaken);
 
-our $VERSION = '1.22';
+our $VERSION = '1.24';
 
 sub new {
     my ($package, $pluggable) = @_;
 
-    weaken($pluggable);
-
-    return bless {
+    my $self = bless {
         PLUGS    => {},
         PIPELINE => [],
         HANDLES  => {},
         OBJECT   => $pluggable,
     }, $package;
+
+    weaken($self->{OBJECT});
+
+    return $self;
 }
 
 sub push {

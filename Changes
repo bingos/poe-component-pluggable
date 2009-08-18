@@ -1,6 +1,9 @@
 POE::Component::Pluggable
 =========================
 
+1.24  Tue Aug 18 09:17:59 BST 2009
+    - Applied patch from Jonathan Steinert to fix RT #48788
+
 1.22  Thu Jul 23 14:12:05 BST 2009
     - Added constant 1.17 as a prereq. Versions prior to 1.03
       did not support the use constant { }; construct.
