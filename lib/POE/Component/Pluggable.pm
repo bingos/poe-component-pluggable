@@ -477,7 +477,7 @@ methods:
 
 =head2 C<pipeline>
 
-Returns the L<POE::Component::Pluggable::Pipeline|POE::Component:::Pluggable::Pipeline>
+Returns the L<POE::Component::Pluggable::Pipeline|POE::Component::Pluggable::Pipeline>
 object.
 
 =head2 C<plugin_add>
