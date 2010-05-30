@@ -246,6 +246,8 @@ sub plugin_unregister {
 1;
 __END__
 
+=encoding utf8
+
 =head1 NAME
 
 POE::Component::Pluggable - A base class for creating plugin-enabled POE Components.
