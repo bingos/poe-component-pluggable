@@ -4,6 +4,7 @@ POE::Component::Pluggable
 1.26
     - Document the 'debug' parameter
     - Croak if the user does not suply the 'types' parameter
+    - Fix problems with SYNOPSIS and show example plugin usage
 
 1.24  Tue Aug 18 09:17:59 BST 2009
     - Applied patch from Jonathan Steinert to fix RT #48788
