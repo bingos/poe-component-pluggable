@@ -431,6 +431,9 @@ to start processing plugins. It accepts a number of argument/value pairs:
           OR a hashref with the event types as keys and their abbrevations
           (used as plugin event method prefixes) as values;
 
+ 'debug', a boolean, if true, will cause a warning to be printed every time a
+          plugin call fails.
+
 Notes: 'prefix' should probably end with a '_'. The types specify the prefixes
 for plugin handlers. You can specify as many different types as you require. 
 
