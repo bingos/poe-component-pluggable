@@ -39,7 +39,7 @@ sub _pluggable_process {
     my ($self, $type, $event, @args) = @_;
 
     if (!defined $type || !defined $event) {
-        carp 'Please supply an event type and name';
+        carp 'Please supply an event type and name!';
         return;
     }
 
@@ -177,12 +177,12 @@ sub plugin_register {
     my $pipeline = $self->pipeline;
 
     if (!grep { $_ eq $type } keys %{ $self->{_pluggable_types} }) {
-        carp "The type '$type' is not supported!";
+        carp "The event type '$type' is not supported!";
         return;
     }
 
     if (!defined $plugin) {
-        carp 'Please supply the plugin object to register!';
+        carp 'Please supply the plugin object to register events for!';
         return;
     }
 
@@ -208,7 +208,7 @@ sub plugin_unregister {
     my $pipeline = $self->pipeline;
 
     if (!grep { $_ eq $type } keys %{ $self->{_pluggable_types} }) {
-        carp "The type '$type' is not supported!";
+        carp "The event type '$type' is not supported!";
         return;
     }
 
