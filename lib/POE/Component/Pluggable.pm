@@ -19,7 +19,7 @@ sub _pluggable_init {
         $self->{_pluggable_types} = { map { $_ => $_ } @{ $self->{_pluggable_types} } };
     }
     elsif (ref $self->{_pluggable_types} ne 'HASH') {
-        $self->{_pluggable_types} = {};
+        croak "Argument 'types' must be supplied";
     }
   
     return 1;
@@ -424,13 +424,14 @@ methods:
 This should be called on your object after initialisation, but before you want
 to start processing plugins. It accepts a number of argument/value pairs:
 
+ 'types', an arrayref of the types of events that your poco will support,
+          OR a hashref with the event types as keys and their abbrevations
+          (used as plugin event method prefixes) as values. This argument is
+          mandatory.
+
  'prefix', the prefix for your events (default: 'pluggable_');
  'reg_prefix', the prefix for the register()/unregister() plugin methods 
                (default: 'plugin_');
- 'types', an arrayref of the types of events that your poco will support,
-          OR a hashref with the event types as keys and their abbrevations
-          (used as plugin event method prefixes) as values;
-
  'debug', a boolean, if true, will cause a warning to be printed every time a
           plugin call fails.
 
