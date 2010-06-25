@@ -141,7 +141,6 @@ sub plugin_del {
     }
 
     my $return = scalar $self->pipeline->remove($name);
-    warn "$@\n" if $@;
     return $return;
 }
 
