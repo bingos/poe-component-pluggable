@@ -105,7 +105,9 @@ sub _handle_error {
       && $return != PLUGIN_EAT_PLUGIN
       && $return != PLUGIN_EAT_CLIENT
       && $return != PLUGIN_EAT_ALL) ) {
-        warn "$sub call on $source did not return a valid EAT constant\n";
+        if ($self->{_pluggable_debug}) {
+            warn "$sub call on $source did not return a valid EAT constant\n";
+        }
     }
 
     return;
