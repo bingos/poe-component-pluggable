@@ -285,12 +285,14 @@ sub _register {
     my $sub = "$self->{OBJECT}{_pluggable_reg_prefix}register";
     eval { $return = $plug->$sub($self->{OBJECT}) };
 
-    if ($@ && $self->{OBJECT}{_pluggable_debug}) {
+    if ($@) {
         chomp $@;
-        warn "$sub call on plugin '$alias' failed: $@\n";
+        my $error = "$sub call on plugin '$alias' failed: $@";
+        $self->_handle_error($error, $plug, $alias);
     }
-    elsif (!$return && $self->{OBJECT}{_pluggable_debug}) {
-        warn "$sub call on plugin '$alias' did not return a true value\n";
+    elsif (!$return) {
+        my $error = "$sub call on plugin '$alias' did not return a true value";
+        $self->_handle_error($error, $plug, $alias);
     }
 
     $self->{PLUGS}{$plug} = $alias;
@@ -312,12 +314,14 @@ sub _unregister {
     my $sub = "$self->{OBJECT}{_pluggable_reg_prefix}unregister";
     eval { $return = $plug->$sub($self->{OBJECT}) };
 
-    if ($@ && $self->{OBJECT}{_pluggable_debug}) {
+    if ($@) {
         chomp $@;
-        warn "$sub call on plugin '$alias' failed: $@\n";
+        my $error = "$sub call on plugin '$alias' failed: $@";
+        $self->_handle_error($error, $plug, $alias);
     }
-    elsif (!$return && $self->{OBJECT}{_pluggable_debug}) {
-        warn "$sub call on plugin '$alias' did not return a true value\n";
+    elsif (!$return) {
+        my $error = "$sub call on plugin '$alias' did not return a true value";
+        $self->_handle_error($error, $plug, $alias);
     }
 
     delete $self->{PLUGS}{$plug};
@@ -330,6 +334,18 @@ sub _unregister {
     );
 
     return $return;
+}
+
+sub _handle_error {
+    my ($self, $error, $plugin, $alias) = @_;
+
+    warn "$error\n" if $self->{OBJECT}{_pluggable_debug};
+    $self->{OBJECT}->_pluggable_event(
+        "$self->{OBJECT}{_pluggable_prefix}plugin_error",
+        $error, $plugin, $alias,
+    );
+
+    return;
 }
 
 1;

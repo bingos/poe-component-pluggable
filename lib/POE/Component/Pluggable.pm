@@ -53,11 +53,11 @@ sub _pluggable_process {
 
     if ($self->can($sub)) {
         eval { $self_ret = $self->$sub( $self, @args ) };
-        $self->_handle_error($sub, $self_ret);
+        $self->_handle_error($self, $sub, $self_ret);
     }
     elsif ( $self->can('_default') ) {
         eval { $self_ret = $self->_default( $self, $sub, @args ) };
-        $self->_handle_error('_default', $self_ret);
+        $self->_handle_error($self, '_default', $self_ret);
     }
 
     return $return if $self_ret == PLUGIN_EAT_PLUGIN;
@@ -76,11 +76,11 @@ sub _pluggable_process {
         my $alias = ($pipeline->get($plugin))[1];
         if ($plugin->can($sub)) {
             eval { $ret = $plugin->$sub($self,@args) };
-            $self->_handle_error($sub, $ret, $alias);
+            $self->_handle_error($plugin, $sub, $ret, $alias);
         }
         elsif ( $plugin->can('_default') ) {
             eval { $ret = $plugin->_default($self,$sub,@args) };
-            $self->_handle_error('_default', $ret, $alias);
+            $self->_handle_error($plugin, '_default', $ret, $alias);
         }
 
 	$ret = PLUGIN_EAT_NONE unless defined $ret;
@@ -93,21 +93,31 @@ sub _pluggable_process {
 }
 
 sub _handle_error {
-    my ($self, $sub, $return, $source) = @_;
+    my ($self, $object, $sub, $return, $source) = @_;
     $source = defined $source ? "plugin '$source'" : 'self';
 
     if ($@) {
         chomp $@;
-        warn "$sub call on $source failed: $@\n" if $self->{_pluggable_debug};
+        my $error = "$sub call on $source failed: $@";
+        warn "$error\n" if $self->{_pluggable_debug};
+
+        $self->_pluggable_event(
+            "$self->{_pluggable_prefix}plugin_error",
+            $error, ($object == $self ? ($object, $source) : ()),
+        );
     }
     elsif ( !defined $return || 
       ($return != PLUGIN_EAT_NONE
       && $return != PLUGIN_EAT_PLUGIN
       && $return != PLUGIN_EAT_CLIENT
       && $return != PLUGIN_EAT_ALL) ) {
-        if ($self->{_pluggable_debug}) {
-            warn "$sub call on $source did not return a valid EAT constant\n";
-        }
+        my $error = "$sub call on $source did not return a valid EAT constant";
+        warn "$error\n" if $self->{_pluggable_debug};
+
+        $self->_pluggable_event(
+            "$self->{_pluggable_prefix}plugin_error",
+            $error, ($object == $self ? ($object, $source) : ()),
+        );
     }
 
     return;
@@ -508,6 +518,9 @@ plugin system. This enables plugins to mangle the arguments if necessary.
 This method should be overridden in your class so that pipeline can dispatch
 events through your event dispatcher. Pipeline sends a prefixed 'plugin_add'
 and 'plugin_del' event whenever plugins are added or removed, respectively.
+A prefixed 'plugin_error' event will be sent if a plugin a) raises an
+exception, b) fails to return a true value from its register/unregister
+methods, or c) fails to return a valid EAT constant from a handler.
 
  sub _pluggable_event {
      my $self = shift;

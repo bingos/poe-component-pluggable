@@ -1,6 +1,9 @@
 POE::Component::Pluggable
 =========================
 
+1.28
+    - Add irc_plugin_error event
+
 1.26
     - Document the 'debug' parameter
     - Croak if the user does not supply the 'types' parameter
