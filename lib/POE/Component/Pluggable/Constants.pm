@@ -2,7 +2,7 @@ package POE::Component::Pluggable::Constants;
 
 use strict;
 use warnings;
-our $VERSION = '1.24';
+our $VERSION = '1.26';
 
 require Exporter;
 use base qw(Exporter);

@@ -1,15 +1,15 @@
 POE::Component::Pluggable
 =========================
 
-1.28
+1.26  Fri Jun 25 18:35:15 BST 2010
+    - Document the 'debug' parameter
+    - Croak if the user does not supply the 'types' parameter
+    - Fix problems with SYNOPSIS and show example plugin usage
     - Don't warn inside plugin_del
     - Don't complain about invalid eat constants when debug mode is off
     - Add irc_plugin_error event
 
-1.26
-    - Document the 'debug' parameter
-    - Croak if the user does not supply the 'types' parameter
-    - Fix problems with SYNOPSIS and show example plugin usage
+    ( All the above by Hinrik ).
 
 1.24  Tue Aug 18 09:17:59 BST 2009
     - Applied patch from Jonathan Steinert to fix RT #48788

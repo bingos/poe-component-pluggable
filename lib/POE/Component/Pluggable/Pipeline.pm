@@ -5,7 +5,7 @@ use warnings;
 use Carp;
 use Scalar::Util qw(weaken);
 
-our $VERSION = '1.24';
+our $VERSION = '1.26';
 
 sub new {
     my ($package, $pluggable) = @_;

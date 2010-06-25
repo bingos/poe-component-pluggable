@@ -254,7 +254,10 @@ PRIVATE METHODS
     This method should be overridden in your class so that pipeline can
     dispatch events through your event dispatcher. Pipeline sends a prefixed
     'plugin_add' and 'plugin_del' event whenever plugins are added or
-    removed, respectively.
+    removed, respectively. A prefixed 'plugin_error' event will be sent if a
+    plugin a) raises an exception, b) fails to return a true value from its
+    register/unregister methods, or c) fails to return a valid EAT constant
+    from a handler.
 
      sub _pluggable_event {
          my $self = shift;
