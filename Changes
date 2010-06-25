@@ -2,6 +2,8 @@ POE::Component::Pluggable
 =========================
 
 1.28
+    - Don't warn inside plugin_del
+    - Don't complain about invalid eat constants when debug mode is off
     - Add irc_plugin_error event
 
 1.26
