@@ -1,8 +1,9 @@
 package POE::Component::Pluggable::Constants;
 
+#ABSTRACT: importable constants for POE::Component::Pluggable
+
 use strict;
 use warnings;
-our $VERSION = '1.26';
 
 require Exporter;
 use base qw(Exporter);
@@ -18,15 +19,11 @@ use constant {
     PLUGIN_EAT_ALL    => 4,
 };
 
-1;
-__END__
+qq[Constantly plugging];
+
+=pod
 
 =encoding utf8
-
-=head1 NAME
-
-POE::Component::Pluggable::Constants - importable constants for
-POE::Component::Pluggable
 
 =head1 SYNOPSIS
 
@@ -66,10 +63,6 @@ Value: 4
 
 This means the event will be completely discarded, no plugin or session will
 see it.
-
-=head1 MAINTAINER
-
-Chris 'BinGOs' Williams <chris@bingosnet.co.uk>
 
 =head1 SEE ALSO
 

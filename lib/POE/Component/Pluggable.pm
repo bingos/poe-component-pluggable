@@ -1,27 +1,27 @@
 package POE::Component::Pluggable;
 
+#ABSTRACT: A base class for creating plugin-enabled POE Components.
+
 use strict;
 use warnings;
 use Carp;
 use POE::Component::Pluggable::Pipeline;
 use POE::Component::Pluggable::Constants qw(:ALL);
 
-our $VERSION='1.26';
-
 sub _pluggable_init {
     my ($self, %opts) = @_;
-  
+
     $self->{'_pluggable_' . lc $_} = delete $opts{$_} for keys %opts;
     $self->{_pluggable_reg_prefix} = 'plugin_' if !$self->{_pluggable_reg_prefix};
     $self->{_pluggable_prefix} = 'pluggable_' if !$self->{_pluggable_prefix};
-  
+
     if (ref $self->{_pluggable_types} eq 'ARRAY') {
         $self->{_pluggable_types} = { map { $_ => $_ } @{ $self->{_pluggable_types} } };
     }
     elsif (ref $self->{_pluggable_types} ne 'HASH') {
         croak "Argument 'types' must be supplied";
     }
-  
+
     return 1;
 }
 
@@ -106,7 +106,7 @@ sub _handle_error {
             $error, ($object == $self ? ($object, $source) : ()),
         );
     }
-    elsif ( !defined $return || 
+    elsif ( !defined $return ||
       ($return != PLUGIN_EAT_NONE
       && $return != PLUGIN_EAT_PLUGIN
       && $return != PLUGIN_EAT_CLIENT
@@ -158,7 +158,7 @@ sub plugin_del {
 
 # Gets the plugin object
 sub plugin_get {
-    my ($self, $name) = @_;  
+    my ($self, $name) = @_;
 
     if (!defined $name) {
         carp 'Please supply a name/object for the plugin to be removed!';
@@ -172,7 +172,7 @@ sub plugin_get {
 sub plugin_list {
     my ($self) = @_;
     my $pipeline = $self->pipeline;
-  
+
     my %return = map {$pipeline->{PLUGS}{$_} => $_} @{ $pipeline->{PIPELINE} };
     return \%return;
 }
@@ -254,14 +254,11 @@ sub plugin_unregister {
     return 1;
 }
 
-1;
-__END__
+qq[Plug me in];
+
+=pod
 
 =encoding utf8
-
-=head1 NAME
-
-POE::Component::Pluggable - A base class for creating plugin-enabled POE Components.
 
 =head1 SYNOPSIS
 
@@ -359,7 +356,7 @@ POE::Component::Pluggable - A base class for creating plugin-enabled POE Compone
 
          return;
      }
-  
+
      sub __send_event {
          my ($kernel, $self, $event, @args) = @_[KERNEL, OBJECT, ARG0..$#_];
 
@@ -488,7 +485,7 @@ to start processing plugins. It accepts a number of argument/value pairs:
           plugin call fails.
 
 Notes: 'prefix' should probably end with a '_'. The types specify the prefixes
-for plugin handlers. You can specify as many different types as you require. 
+for plugin handlers. You can specify as many different types as you require.
 
 =head2 C<_pluggable_destroy>
 
@@ -504,14 +501,14 @@ The first argument is a type, as specified to C<_pluggable_init()>.
 
  sub _dispatch {
      # stuff
-    
+
      return 1 if $self->_pluggable_process($type, $event, \(@args)) == PLUGIN_EAT_ALL;
 
      # dispatch event to interested sessions.
  }
 
 This example demonstrates event arguments being passed as scalar refs to the
-plugin system. This enables plugins to mangle the arguments if necessary. 
+plugin system. This enables plugins to mangle the arguments if necessary.
 
 =head2 C<_pluggable_event>
 
@@ -686,18 +683,6 @@ You could provide your own as long as the values match up, though.
 
 Better documentation >:]
 
-=head1 AUTHOR
-
-Chris 'BinGOs' Williams <chris@bingosnet.co.uk>
-
-=head1 LICENSE
-
-Copyright C<(c)> Chris Williams, Apocalypse, Hinrik Örn Sigurðsson and Jeff Pinyan
-
-This module may be used, modified, and distributed under the same terms as
-Perl itself. Please see the license that came with your Perl distribution for
-details.
-
 =head1 KUDOS
 
 APOCAL for writing the original L<POE::Component::IRC|POE::Component::IRC>
@@ -706,7 +691,7 @@ plugin system.
 japhy for writing L<POE::Component::IRC::Pipeline|POE::Component::IRC::Pipeline>
 which improved on it.
 
-All the happy chappies who have contributed to POE::Component::IRC over the 
+All the happy chappies who have contributed to POE::Component::IRC over the
 years (yes, it has been years) refining and tweaking the plugin system.
 
 The initial idea was heavily borrowed from X-Chat, BIG thanks go out to the

@@ -1,11 +1,11 @@
 package POE::Component::Pluggable::Pipeline;
 
+#ABSTRACT: the plugin pipeline for POE::Component::Pluggable
+
 use strict;
 use warnings;
 use Carp;
 use Scalar::Util qw(weaken);
-
-our $VERSION = '1.26';
 
 sub new {
     my ($package, $pluggable) = @_;
@@ -78,7 +78,7 @@ sub shift {
 
 sub replace {
     my ($self, $old, $new_a, $new_p) = @_;
-    
+
     my ($old_a, $old_p) = ref $old
         ? ($self->{PLUGS}{$old}, $old)
         : ($old, $self->{PLUGS}{$old})
@@ -137,7 +137,7 @@ sub remove {
 
 sub get {
     my ($self, $old) = @_;
-    
+
     my ($old_a, $old_p) = ref $old
         ? ($self->{PLUGS}{$old}, $old)
         : ($old, $self->{PLUGS}{$old})
@@ -154,7 +154,7 @@ sub get {
 
 sub get_index {
     my ($self, $old) = @_;
-    
+
     my ($old_a, $old_p) = ref $old
         ? ($self->{PLUGS}{$old}, $old)
         : ($old, $self->{PLUGS}{$old})
@@ -176,7 +176,7 @@ sub get_index {
 
 sub insert_before {
     my ($self, $old, $new_a, $new_p) = @_;
-    
+
     my ($old_a, $old_p) = ref $old
         ? ($self->{PLUGS}{$old}, $old)
         : ($old, $self->{PLUGS}{$old})
@@ -297,7 +297,7 @@ sub _register {
 
     $self->{PLUGS}{$plug} = $alias;
     $self->{PLUGS}{$alias} = $plug;
-    
+
     $self->{OBJECT}->_pluggable_event(
         "$self->{OBJECT}{_pluggable_prefix}plugin_add",
         $alias, $plug,
@@ -348,15 +348,9 @@ sub _handle_error {
     return;
 }
 
-1;
-__END__
+qq[Pipey McPipeline];
 
 =encoding utf8
-
-=head1 NAME
-
-POE::Component::Pluggable::Pipeline - the plugin pipeline for
-POE::Component::Pluggable.
 
 =head1 SYNOPSIS
 
@@ -418,7 +412,7 @@ POE::Component::Pluggable.
 =head1 DESCRIPTION
 
 POE::Component::Pluggable::Pipeline defines the Plugin pipeline system
-for L<POE::Component::Pluggable|POE::Component::Pluggable> instances.  
+for L<POE::Component::Pluggable|POE::Component::Pluggable> instances.
 
 =head1 METHODS
 
@@ -570,17 +564,9 @@ in the pipeline is returned.
 
 None known so far.
 
-=head1 AUTHOR
-
-Jeff C<japhy> Pinyan, F<japhy@perlmonk.org>.
-
-=head1 MAINTAINER
-
-Chris C<BinGOs> Williams, F<chris@bingosnet.co.uk>.
-
 =head1 SEE ALSO
 
-L<POE::Component::IRC|POE::Component::IRC>, 
+L<POE::Component::IRC|POE::Component::IRC>,
 
 L<POE::Component::Pluggable|POE::Component::Pluggable>.
 
